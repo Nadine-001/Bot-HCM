@@ -9,7 +9,7 @@ import time, asyncio
 bot = AsyncTeleBot('5538226702:AAGdbNQmMSCiQS_861iti98NBh69J1UwBzI')
 
 # list chat ID user
-id = [5363691964]
+id = [5363691964, 5033311508, 1372954700]
 
 # chat ID untuk testing bot :
 # Nessa : 5363691964, 5142972565
@@ -26,11 +26,8 @@ days = ["Monday", "Tuesday", "Wednesday",
         "Sunday"]
 
 # waktu untuk trigger pesan reminder
-# elemen terakhir untuk testing bot
-fiveTo = ["07:55", "16:55", "19:55", "13:17"]
-exactTime = ["08:00", "17:00", "20:00", "13:18"]
-## aMinute = ["07:54", "16:54", "19:54"
-##             "07:59", "16:59", "19:59"]
+fiveTo = ["07:55", "16:55", "19:55", "15:40"]
+exactTime = ["08:00", "17:00", "20:00", "15:45"]
 ## fivepast = ["08:05", "17:05", "20:05"]
 
 # pesan reminder
@@ -52,8 +49,6 @@ async def welcome(message) :
     # pesan balasan
     await bot.send_message(chatID, "What's up, mate?")
 
-## last_textchat = ""
-
 async def reminder(day, time) :
     global idDone
 
@@ -61,13 +56,11 @@ async def reminder(day, time) :
     weekend = [days[5], days[6]]
 
     for i in id :
+        
         # jika hari ini adalah hari kerja
         if day not in weekend :
             # jika waktu presensi kurang 5 menit
             if time in fiveTo :
-                ## msg = template[0]
-                ## send(i, msg)
-
                 # jika user belum mendapatkan pesan reminder
                 if i not in idDone :
                     # mengirim pesan
@@ -76,9 +69,6 @@ async def reminder(day, time) :
 
             # jika sudah masuk waktu presensi
             elif time in exactTime :
-                ## msg = template[1]
-                ## send(i, msg)
-
                 # jika user belum mendapatkan pesan reminder
                 if i not in idDone :
                     # mengirim pesan
@@ -93,23 +83,14 @@ async def reminder(day, time) :
         else :
             idDone = []
         
-        ## idDone.append(i)
-
         # ini cuma buat ngecek di terminal
-        print("\nidDone :", idDone)     
-
-## def send(chatID, chat) :
-##     global last_textchat, idDone
-##    if chatID not in idDone :
-##        bot.send_message(chatID, chat)
-##        last_textchat = chat
+        ## print("\nidDone :", idDone)     
 
 async def main() :
     while True :
         # mengecek hari
         today = date.today()
         today = today.weekday()
-        ## print(today)
 
         # memeriksa waktu saat ini
         currentTime = time.strftime("%H:%M")
@@ -122,8 +103,8 @@ async def main() :
         await reminder(today, currentTime)
 
         # ini cuma buat ngecek di terminal
-        currentTime = time.strftime("%H:%M:%S")
-        print("*", currentTime, "*")
+        ## currentTime = time.strftime("%H:%M:%S")
+        ## print("*", currentTime, "*")
 
         # waktu tunggu loop
         await asyncio.sleep(60 - second)
@@ -136,5 +117,3 @@ loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 cors = asyncio.wait([main(), bot.polling()])
 loop.run_until_complete(cors)
-
-# Tinggal deploy, gengs ehe
