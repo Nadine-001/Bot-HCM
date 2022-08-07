@@ -1,7 +1,4 @@
-# run this first on terminal :
-# pip install pyTelegramBotAPI
 from telebot.async_telebot import AsyncTeleBot
-
 from datetime import date
 import time, asyncio
 
@@ -20,19 +17,16 @@ id = [5363691964, 5033311508, 1372954700]
 # untuk menghindari spam
 idDone = []
 
-# list hari
-days = ["Monday", "Tuesday", "Wednesday",
-        "Thursday", "Friday", "Saturday",
-        "Sunday"]
-
 # waktu untuk trigger pesan reminder
-fiveTo = ["07:55", "16:55", "19:55", "15:40"]
-exactTime = ["08:00", "17:00", "20:00", "15:45"]
+fiveTo = ["07:55", "16:55", "19:55"]
+exactTime = ["08:00", "17:00", "20:00"]
 ## fivepast = ["08:05", "17:05", "20:05"]
 
 # pesan reminder
-template = ['Jangan lupa untuk mengisi presensi 5 menit lagi!',
-            'Waktunya untuk mengisi presensi!']
+template = ['📌 Jangan lupa untuk mengisi presensi 5 menit lagi!',
+            '📢 Waktunya untuk mengisi presensi!',
+            'Saya akan mengingatkan Anda untuk mengisi presensi pada jam 8 pagi, \
+5 sore, dan 8 malam.\n\nSalam kenal,\nPresensiReminder 😊']
 
 # /start command dari user
 @bot.message_handler(commands=['start'])
@@ -47,16 +41,15 @@ async def welcome(message) :
     ## print(id)
 
     # pesan balasan
-    await bot.send_message(chatID, "What's up, mate?")
+    await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\n\n{template[2]}')
 
 async def reminder(day, time) :
     global idDone
 
     # hari libur
-    weekend = [days[5], days[6]]
+    weekend = [5, 6]
 
-    for i in id :
-        
+    for i in id : 
         # jika hari ini adalah hari kerja
         if day not in weekend :
             # jika waktu presensi kurang 5 menit
@@ -83,12 +76,11 @@ async def reminder(day, time) :
         else :
             idDone = []
         
-        # ini cuma buat ngecek di terminal
         ## print("\nidDone :", idDone)     
 
 async def main() :
     while True :
-        # mengecek hari
+        # memeriksa hari
         today = date.today()
         today = today.weekday()
 
@@ -102,18 +94,18 @@ async def main() :
         # memanggil fungsi reminder
         await reminder(today, currentTime)
 
-        # ini cuma buat ngecek di terminal
         ## currentTime = time.strftime("%H:%M:%S")
         ## print("*", currentTime, "*")
+        ## print("-", today, "-")
 
         # waktu tunggu loop
         await asyncio.sleep(60 - second)
 
-## asyncio.run(main())
-## asyncio.run(bot.polling())
-
 # run using asynchronous mode
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-cors = asyncio.wait([main(), bot.polling()])
-loop.run_until_complete(cors)
+try :
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    cors = asyncio.wait([main(), bot.polling()])
+    loop.run_until_complete(cors)
+except :
+    pass
