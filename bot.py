@@ -16,9 +16,9 @@ exactTime = ['08:00:00', '17:00:00', '20:00:00']
 ## fivepast = ['08:05', '17:05', '20:05']
 
 # pesan reminder
-template = ['📌 Jangan lupa untuk mengisi presensi 5 menit lagi!',
-            '📢 Waktunya untuk mengisi presensi!',
-            'Saya akan mengingatkan Anda untuk mengisi presensi pada jam 8 pagi, \
+template = ['📌 SEMANGAT PAGI! Jangan lupa untuk absensi 5 menit lagi!',
+            '📢 SEMANGAT PAGI! Waktunya untuk absensi!',
+            'Bot ini akan mengingatkan Anda untuk absensi pada jam 8 pagi, \
 5 sore, dan 8 malam.\n\nSalam kenal,\nPresensiReminder 😊']
 
 # /start command dari user
