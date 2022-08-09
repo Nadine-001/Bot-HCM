@@ -11,15 +11,16 @@ bot = AsyncTeleBot('5538226702:AAGdbNQmMSCiQS_861iti98NBh69J1UwBzI')
 # Arini : 1372954700
 
 # waktu untuk trigger pesan reminder
-fiveTo = ['07:55:00', '16:55:00', '19:55:00']
-exactTime = ['08:00:00', '17:00:00', '20:00:00']
+fiveTo = ['07:55:00', '16:55:00', '19:55:00', '18:40:00']
+exactTime = ['08:00:00', '17:00:00', '20:00:00', '18:41:00']
 ## fivepast = ['08:05', '17:05', '20:05']
 
 # pesan reminder
-template = ['📌 SEMANGAT PAGI! Jangan lupa untuk absensi 5 menit lagi!',
-            '📢 SEMANGAT PAGI! Waktunya untuk absensi!',
+template = ['SEMANGAT PAGI! 🙌🏻\n📌 Jangan lupa untuk absensi 5 menit lagi!',
+            'SEMANGAT PAGI! 🙌🏻\n📢 Waktunya untuk absensi!',
             'Bot ini akan mengingatkan Anda untuk absensi pada jam 8 pagi, \
-5 sore, dan 8 malam.\n\nSalam kenal,\nPresensiReminder 😊']
+5 sore, dan 8 malam.\n\nSalam kenal,\nPresensiReminder 😊',
+            'Tes']
 
 # /start command dari user
 @bot.message_handler(commands=['start'])
@@ -75,11 +76,11 @@ async def reminder(day, time) :
         if day not in weekend :
             # jika waktu presensi kurang 5 menit
             if time in fiveTo :
-                await bot.send_message(i[0], template[0])
+                await bot.send_message(i[0], template[3] + 'doang')
 
             # jika sudah masuk waktu presensi
             elif time in exactTime :
-                await bot.send_message(i[0], template[1])     
+                await bot.send_message(i[0], template[3] + 'lagi')     
 
 async def main() :
     while True :
