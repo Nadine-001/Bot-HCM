@@ -11,8 +11,8 @@ bot = AsyncTeleBot('5538226702:AAGdbNQmMSCiQS_861iti98NBh69J1UwBzI')
 # Arini : 1372954700
 
 # waktu untuk trigger pesan reminder
-fiveTo = ['07:55:00', '16:55:00', '19:55:00', '18:40:00']
-exactTime = ['08:00:00', '17:00:00', '20:00:00', '18:41:00']
+fiveTo = ['07:55:00', '16:55:00', '19:55:00', '18:41:00']
+exactTime = ['08:00:00', '17:00:00', '20:00:00', '18:42:00']
 ## fivepast = ['08:05', '17:05', '20:05']
 
 # pesan reminder
