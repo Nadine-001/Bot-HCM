@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "presensi-reminder",
+  "private_key_id": "d1bf80bbd5733de6ec35fda4767e3b4f5ebec947",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCdPtibOikYmsQX\nUd6l9TpWQz/21YwupWSQBK6/AHUG0Ct7KfmH1+4MXKpWj/uIN4mfANDq9+mSl1wM\nwuVfZg+mw8z8FSWd0LWtJnL/+3yEloSbOdYEssEa1ufKiWmSMyIvViqacejYqXFs\n1CkQe4lqzPkwbwJaMapUNtf7Rvo2KH3iM457ZdyyN36f71PzF41Lbd3wIOfFYbJM\nO3/mFTthDI4TC480cZwiX1zh9tbnKVa+7fTodKrCKOKfI3rvNBXwWZERAOahsebE\nduXzkvNkrDimsJkqZtbjl3F2QvDCk32AHNadH8I7tdQa8YDkb7f/76+fw8AiXaeG\nCD1WFIbdAgMBAAECggEADZtNlQkQW0+xHi94a7XvqV1CYLKT4clwDUJKeL6qYb+L\ns6mrLQUTVUCDgOAOrPfZUcf5TAvNy2CLl5MZ1Ap52j1hNIMD8UcJIYWNN/dkC/kW\nWnRDv75UFWV5Qz5mwz7ne18iaqDmvDDVXsxxDTsTZgl8mqNQecuIaKciQ10d86ek\nm9je+YFK9ptAGNfiCbMnHES75doRQKFUz30Qs9w2hFveU0mmKqwqPCTNVFqJtl1R\nVRabqP7l2SdUKKVSC+bMPwC79Xgjb9m/Sjay1YFq2u8V7lCL9J14UeWg6ueNskT3\nJiFeIyuhgrGWqVf4jsK71N08T6Nys1su2qtEq6slxQKBgQDI4hVHjJv58tE0bhhe\n6NPLwRoH4C4NpvLVnr+cdH40BU9QLdCks+/GWKR16iReO7KehEWtXVzyuRzZWalv\nnRzZoFHCjDh9k2v3CwSS6DCBBkEAzPVgfjjjUpBrcAx4jk05yS4Hdhbat1n5ruTS\nypoI9LEsnR29+uni8VlEbRwA1wKBgQDIY64EYGYZ00wqgDT+RJRXzIM6S871n70H\nKhTSHNEzHse6nZdNE9Xkwt3pN9bkbZKhjK7WHpdjKojLYgerHPc5KWPOx8TkvsUY\nTwwqf27jv+IJsobMo/1WI9TVhIs4EMNVfwYXIS1CDp/Gm5nAzULD31z5g36VjSmL\nhy42TlKbawKBgQCG9QSwzfFYKd6M584trSPlRnTzh5PJDjkkdQNr3AORdWPEjRMY\nI97ZlWHf6g7G1Dp7LogVIZ05YE3WY9tmJdplBsUG++dTzkABd4B6Jc24UPhIzmmn\niwUzC5wE4gEu2QNe6B6pWpeeFwI2sV3/k6eKjsGdJGz/3ltVYSnEw7zFfwKBgHpl\n2D64GuUfWOCE2tmMTgeq1WTgNRN2dGFR5NHJ5EYTQO/NnkLoILfQBveSseFoxC2E\n3q3Ola1up4uC3yg3UxJJI7uD7dHCbGTCs62plLPr2kcOEqQgbncU/8VDZj3ij01D\nfxbVnu1APXt0Q1+ugF9fqUyGcuUqCfw9n45wHKjtAoGAJ0m3dr0HqRj08IHEWEus\niWimGk6/QTcvhGvcr9gGAKR4Vm7EaOCYEFCdEscyrfMUOhytF7Riv1Lc1CvVLjl5\nK34J/pJPpjtx/lIGgJa+xiBz/TBs1DwP6cdS6yEmo3mYXuWdw4orNYO0KCx9U06q\nNLglwVlWPG7MFAwF8R12okI=\n-----END PRIVATE KEY-----\n",
+  "client_email": "presensi-reminder@presensi-reminder.iam.gserviceaccount.com",
+  "client_id": "107269036952200588553",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/presensi-reminder%40presensi-reminder.iam.gserviceaccount.com"
+}
