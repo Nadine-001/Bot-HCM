@@ -6,8 +6,8 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import date
 import time, asyncio, gspread, random
 
-bot = AsyncTeleBot('5538226702:AAGdbNQmMSCiQS_861iti98NBh69J1UwBzI', state_storage=StateMemoryStorage())
-# bot = AsyncTeleBot('5088370919:AAHa6lHh_S8jR--KGU2Y3u-D3jNV3KktfNU', state_storage=StateMemoryStorage())
+# bot = AsyncTeleBot('5538226702:AAGdbNQmMSCiQS_861iti98NBh69J1UwBzI', state_storage=StateMemoryStorage())
+bot = AsyncTeleBot('5088370919:AAHa6lHh_S8jR--KGU2Y3u-D3jNV3KktfNU', state_storage=StateMemoryStorage())
 
 # custom states
 class States(StatesGroup):
@@ -19,35 +19,38 @@ gs = gspread.service_account(filename='presensi-reminder.json')
 sh = gs.open_by_key('1kNYfAQGDcZD-EcJQOfkFKErJ_QfilyQH4NwNxLAe5OM')
 ws = sh.sheet1
 
-# waktu untuk trigger pesan reminder
-fiveTo = ('07:55:00', '16:55:00', '19:55:00')
-exactTime = ('08:00:00', '17:00:00', '20:00:00')
+idDone = []
 
-# pesan reminder
-fiveMins = ["Baru saja kulihat si tampan\nSelain tinggi, dia pun pandai\nPenuhi hari dengan senyuman\n📌 Yuk absensi 5 menit lagi\n\nSemangat Pagi! 🙌🏻",
-            "Semangat Pagi! 🙌🏻\nSama seperti ayang yang rutin mengingatkan makan, bot ini juga akan mengingatkan kamu untuk absensi 5 menit lagi",
-            "Semangat Pagi! 🙌🏻\nKamu mau aku kasih tahu sesuatu ga?\nSebenernya, 5 menit lagi waktunya absensi\nJangan lupa, ya",
-            "Hai, Kak\nAku sudah lama memendam rasa ini\nTolong izinkan aku untuk mengingatkan bahwa 5 menit lagi waktunya absensi\n\nSemangat Pagi! 🙌🏻",
-            "Rencang-rencang, absensi 5 menit malih, nggih\nSemangat Pagi! 🙌🏻"]
-morning = ["Selamat Pagi, Semangat Pagi! 🙌🏻\nSudah jam 8 pagi, yuk buka aplikasi SUPER HANA untuk absensi",
-           "Sugeng enjang\nYok rencang-rencang absensi riyen wonten aplikasi SUPER HANA\n\nSemangat Pagi! 🙌🏻",
-           "Makan sate hangat-hangat\nTiba-tiba turun hujan lebat\nPagi-pagi penuh semangat 🙌🏻\nYuk absensi, sudah jam 8 tepat",
-           "Semangat Pagi! 🙌🏻\nCuma mau ngingetin, jangan lupa absensi di aplikasi SUPER HANA, ya\nPastikan absensi sudah tercatat di sistem",
-           "Pagi, Kak! 🙌🏻\nKakak tahu ga persamaan sarapan sama absensi di aplikasi SUPER HANA?\nIya, sama-sama penting!\nNah, jangan sampai lupa dua-duanya, ya"]
-afternoon = ["Sugeng sonten\nYok rencang-rencang absensi riyen wonten aplikasi SUPER HANA\n\nSemangat Pagi! 🙌🏻",
-             "Selamat Sore, Semangat Pagi! 🙌🏻\nIzin untuk mengingatkan, Kak, jangan lupa absensi di aplikasi SUPER HANA ya",
-             "Sudah lama tak bertemu\nAku masih menunggumu di sini\nSemangat pagi selalu 🙌🏻\nJangan lupa absensi sore ini 📢",
-             "Sore, Kak\nJangan lupa makan, ya\nJaga kesehatan dan jangan lupa juga absensi sore hari ini di aplikasi SUPER HANA, oke?",
-             "Kak, ada yang mau aku omongin\nIni udah jam 5 sore, yuk buka aplikasi SUPER HANA buat absensi dulu\n\nSemangat Pagi! 🙌🏻\n"]
-night = ["Banyak uang jangan dihambur\nMengasah otak bermain catur\nBuat kamu yang lagi lembur\nAbsensi dulu sebelum tidur\n\nSemangat Pagi! 🙌🏻",
-         "Sugeng ndalu\nRencang-rencang ingkang lembur, absensi riyen wonten aplikasi SUPER HANA, nggih\n\nSemangat Pagi! 🙌🏻",
-         "Selamat Malam, Semangat Pagi! 🙌🏻\nBuat kakak yang lagi lembur, jangan lupa absensi dulu di aplikasi SUPER HANA, ya",
-         "Malam, Kak\nUdah absensi, belum?\nKalau belum, absensi dulu yaa\nJangan sampai lupa\n\nSemangat Pagi! 🙌🏻",
-         "Semangat Pagi, Kakaak! 🙌🏻\nUdah jam 8 malem nih ternyata, waktunya absensi\nJangan lupa, ya!"]
+# waktu untuk trigger pesan reminder
+fiveTo = ('07:55', '16:55', '19:55')
+exactTime = ('08:00', '17:00', '20:00')
+
+# default reminder
+fiveMins = ["Baru saja kulihat si tampan 😳\nSelain tinggi, dia pun pandai 😍\nPenuhi hari dengan senyuman 🌻\nYuk absensi 5 menit lagi ✨\n\nSemangat Pagi! 🔥",
+            "Semangat Pagi! 🔥\n\nSama seperti ayang yang rutin mengingatkan makan, bot ini juga akan mengingatkan kamu untuk absensi 5 menit lagi 😚",
+            "Kamu mau aku kasih tahu sesuatu ga? 👉🏻👈🏻\nSebenernya, 5 menit lagi waktunya absensi 😗\nJangan lupa, ya ✨\n\nSemangat Pagi! 🔥",
+            "Kak, aku sudah lama memendam rasa ini 🥺\nTolong izinkan aku untuk mengingatkan kalau 5 menit lagi waktunya absensi 😆\n\nSemangat Pagi! 🔥",
+            "Rencang-rencang, absensi 5 menit malih, nggih 😊\n\nSemangat Pagi! 🔥"]
+morning = ["Selamat Pagi, Semangat Pagi! 🔥\n\nSudah jam 8 pagi, yuk buka aplikasi SUPER HANA untuk absensi ✍🏻",
+           "Sugeng enjang 🌤\nYok rencang-rencang absensi riyen wonten aplikasi SUPER HANA ✍🏻\n\nSemangat Pagi! 🔥",
+           "Makan sate hangat-hangat 🍢\nTiba-tiba turun hujan lebat ⛈\nPagi-pagi penuh semangat 🔥\nYuk absensi, sudah jam 8 tepat ✍🏻",
+           "Semangat Pagi! 🔥\n\nCuma mau ngingetin, jangan lupa absensi di aplikasi SUPER HANA, ya 🤗\nPastikan absensi sudah tercatat di sistem ✍🏻",
+           "Pagi, Kak! 🔥\n\nKakak tahu ga persamaan sarapan sama absensi di aplikasi SUPER HANA? 🤔\nIya, sama-sama penting❗️\nNah, jangan sampai lupa dua-duanya, ya 😊"]
+afternoon = ["Sugeng sonten 🌥\nYok rencang-rencang absensi riyen wonten aplikasi SUPER HANA ✍🏻\n\nSemangat Pagi! 🔥",
+             "Selamat Sore, Semangat Pagi! 🔥\n\nIzin untuk mengingatkan, Kak, jangan lupa absensi di aplikasi SUPER HANA ya 😊",
+             "Sudah lama tak bertemu 😔\nAku masih menunggumu di sini 🥺\nSemangat pagi selalu 🔥\nJangan lupa absensi sore ini ✨",
+             "Sore, Kak 👋🏻\nJangan lupa makan, ya\nJaga kesehatan dan jangan lupa juga absensi sore hari ini di aplikasi SUPER HANA, oke? 🤗",
+             "Kak, ada yang mau aku omongin 🤫\nIni udah jam 5 sore, yuk buka aplikasi SUPER HANA buat absensi dulu 😆\n\nSemangat Pagi! 🔥\n"]
+night = ["Banyak uang jangan dihambur 💸\nMengasah otak bermain catur ♟\nBuat kamu yang lagi lembur 🥱\nAbsensi dulu sebelum tidur 😴\n\nSemangat Pagi! 🔥",
+         "Sugeng ndalu 🌝\nRencang-rencang ingkang lembur, absensi riyen wonten aplikasi SUPER HANA, nggih 😊\n\nSemangat Pagi! 🔥",
+         "Selamat Malam, Semangat Pagi! 🔥\n\nBuat kakak yang lagi lembur, jangan lupa absensi dulu di aplikasi SUPER HANA, ya ✨",
+         "Malam, Kak 👋🏻\n\nUdah absensi, belum?\nKalau belum, absensi dulu yaa 🤗\nJangan sampai lupa❗️\n\nSemangat Pagi! 🔥",
+         "Semangat Pagi, Kakaak! 🔥\nUdah jam 8 malem nih ternyata, waktunya absensi ✍🏻\nJangan lupa, ya! ✨"]
 
 @bot.message_handler(commands=['start'])
 async def start(message) :
     chatID = message.chat.id
+    user = message.from_user.username
     messageID = message.from_user.id
 
     await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
@@ -65,6 +68,7 @@ async def start(message) :
         # menambahkan chat ID dan username ke GSS
         row = len(id) + 1
         ws.update_cell(row, 1, chatID)
+        ws.update_cell(row, 2, user)
         
         # memulai state inputData
         await bot.set_state(messageID, States.inputData, chatID)
@@ -74,18 +78,20 @@ async def start(message) :
                                \n\nMohon kesediaannya untuk mengisi data-data berikut:\
                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                               \n\nContoh:\nFaizhal Rifky Alfaris\n00011122\n085566677788')
+                               \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
 
-@bot.message_handler(state="*", commands='cancel')
+@bot.message_handler(state='*', commands='cancel')
 async def cancel(message):
     id = ws.col_values(1)
     chatID = message.chat.id
     messageID = message.from_user.id
 
     cell = id.index(str(chatID)) + 1
-    cell = ws.row_values(cell)
+    dataUser = ws.row_values(cell)
 
-    if len(cell) < 3 :
+    print(dataUser)
+
+    if dataUser[2] == '' :
         await bot.send_message(chatID, '🚫 Kamu harus melengkapi data terlebih dahulu.')
     else :
         await bot.delete_state(messageID, chatID)
@@ -109,8 +115,8 @@ async def inputData(message) :
         nik = data['dataUser'][1]
         nomorHp = data['dataUser'][2]
         
-        # nik harus sebanyak ... digit angka dan nomor Hp harus lebih dari 10 digit angka
-        if (nik.isdigit() and len(nik) == 8) and (nomorHp.isdigit() and len(nomorHp) >= 10) :
+        # nik harus sebanyak 6 sampai 8 digit angka dan nomor Hp harus lebih dari 10 digit angka
+        if (nik.isdigit() and len(nik) in range (6, 9)) and (nomorHp.isdigit() and len(nomorHp) >= 10) :
             # menambahkan atau meng-update data user di GSS
             cell = id.index(str(chatID)) + 1
             ws.update_cell(cell, 1, chatID)
@@ -127,7 +133,7 @@ async def inputData(message) :
         # jika input user tidak sesuai format
         else : 
             await bot.reply_to(message, '❌ Teliti kembali data ini. Pastikan sudah sesuai format.\
-                               \n\nContoh:\nFaizhal Rifky Alfaris\n00011122\n085566677788')
+                               \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
 
     # jika input user kurang atau lebih dari 3 data
     else :
@@ -146,10 +152,12 @@ async def cek(message) :
         cell = id.index(str(chatID)) + 1
         dataUser = ws.row_values(cell)
 
+        print(dataUser)
+
         # jika data user di GSS belum lengkap
-        if len(dataUser) < 5 :
-            for i in range(len(dataUser), 5) :
-                dataUser.append('-')
+        if dataUser[2] == '' :
+            for i in range(2, 5) :
+                dataUser[i] = '-'
 
         # mengirim data user
         await bot.send_message(chatID, f'Username: @{dataUser[1]}\
@@ -182,7 +190,7 @@ async def update(message) :
 
     # jika chat ID ada di data GSS
     if str(chatID) in id :
-        await bot.send_message(chatID, 'Apakah kamu sudah melakukan pengecekkan data?', reply_markup=await answer())
+        await bot.send_message(chatID, 'Apakah kamu sudah melakukan pengecekan data?', reply_markup=await answer())
 
     # jika chat ID tidak ada di data GSS
     else :
@@ -198,7 +206,7 @@ async def callback_query(call) :
         await bot.send_message(chatID, 'Silakan isi data-data berikut:\
                                 \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
                                 \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                                \n\nContoh:\nFaizhal Rifky Alfaris\n00011122\n085566677788')
+                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
         ## await bot.edit_message_reply_markup(inline_message_id=messageID, reply_markup=None)
         await bot.set_state(messageID, States.inputData, chatID)
@@ -225,10 +233,6 @@ async def callback_query(call) :
         
         # memulai state customMsg
         await bot.set_state(messageID, States.customMsg, chatID)
-
-    # jika user tidak memilih jawaban dari inline keyboard
-    else :
-        await bot.send_message(chatID, '❌ Input tidak valid.')
 
 # Pilihan "8 Pagi", "5 Sore", dan "8 Malam"
 async def options() :
@@ -296,7 +300,7 @@ async def anything(message) :
     await bot.send_message(chatID, 'Tekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.')
 
 async def reminder(day, time) :
-    global fiveMins, morning, afternoon, night, id
+    global fiveMins, morning, afternoon, night, id, idDone
 
     # mengambil pesan secara random dari template pesan
     randFiveMins = random.choice(fiveMins)
@@ -313,39 +317,54 @@ async def reminder(day, time) :
         # jika waktu absensi kurang 5 menit
         if time in fiveTo :
             for i in id[1:] :
-                await bot.send_message(i, randFiveMins)
+                if i not in idDone :
+                    await bot.send_message(i, randFiveMins)
+                    idDone.append(i)
 
         # jika waktu absensi adalah jam 8 pagi
         elif time == exactTime[0] :
             for i in id[1:] :
-                # memanggil fungsi custom
-                randMorning = await custom(i, 5, randMorning)
+                if i not in idDone :
+                    # memanggil fungsi custom
+                    await custom(i, 5, randMorning)
 
-                await bot.send_message(i, randMorning)
+                    idDone.append(i)
         
         # jika waktu absensi adalah jam 5 sore
         elif time == exactTime[1] :
             for i in id[1:] :
-                # memanggil fungsi custom
-                randAfternoon = await custom(i, 6, randAfternoon)
+                if i not in idDone :
+                    # memanggil fungsi custom
+                    await custom(i, 6, randAfternoon)
 
-                await bot.send_message(i, randAfternoon)
-        
+                    idDone.append(i)
+            
         # jika waktu absensi adalah jam 8 malam
         elif time == exactTime[2] :
             for i in id[1:] :
-                # memanggil fungsi custom
-                randNight = await custom(i, 7, randNight)
+                if i not in idDone :
+                    # memanggil fungsi custom
+                    await custom(i, 7, randNight)
 
-                await bot.send_message(i, randNight)
+                    idDone.append(i)
+        
+        print(idDone)
+        # mereset list idDone jika semua user sudah menerima reminder
+        if len(idDone) == len(id[1:]) :
+            idDone = []
 
-async def custom(chatID, column, schedule) :
+    # mereset list idDone pada hari libur
+    else :
+        idDone = []
+
+# fungsi untuk memeriksa custom reminder di GSS
+async def custom(chatID, column, random) :
     cell = id.index(str(chatID)) + 1
     cell = ws.row_values(cell)
     if cell[column] != '-' :
-        schedule = cell[column]
+        random = cell[column]
 
-    return schedule
+    await bot.send_message(chatID, random)      
 
 async def main() :
     while True :
@@ -354,7 +373,7 @@ async def main() :
         today = today.weekday()
 
         # memeriksa waktu saat ini
-        currentTime = time.strftime('%H:%M:%S')
+        currentTime = time.strftime('%H:%M')
 
         # memanggil fungsi reminder
         await reminder(today, currentTime)
@@ -362,8 +381,11 @@ async def main() :
         ## print('*', currentTime, '*')
         ## print('-', today, '-')
 
+        second = time.strftime('%S')
+        second = int(second)
+
         # waktu tunggu loop
-        await asyncio.sleep(1)
+        await asyncio.sleep(60 - second)
 
 # run using asynchronous mode
 try :
