@@ -6,46 +6,30 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import date
 import time, asyncio, gspread, random
 
-# bot = AsyncTeleBot('5538226702:AAGdbNQmMSCiQS_861iti98NBh69J1UwBzI', state_storage=StateMemoryStorage())
 bot = AsyncTeleBot('5088370919:AAHa6lHh_S8jR--KGU2Y3u-D3jNV3KktfNU', state_storage=StateMemoryStorage())
 
 # custom states
 class States(StatesGroup):
     inputData = State()
     customMsg = State()
+    addMsg = State()
+    broadcast = State()
 
 # link ke GSS
 gs = gspread.service_account(filename='presensi-reminder.json')
 sh = gs.open_by_key('1kNYfAQGDcZD-EcJQOfkFKErJ_QfilyQH4NwNxLAe5OM')
-ws = sh.sheet1
+sheet1 = sh.worksheet("user_data")
+sheet2 = sh.worksheet("template_messages")
+sheet3 = sh.worksheet("custom_messages")
+
+# chat ID admin
+admin = (1372954700, 5033311508, 5142972565, 117145654, 116126490)
 
 idDone = []
 
 # waktu untuk trigger pesan reminder
 fiveTo = ('07:55', '16:55', '19:55')
 exactTime = ('08:00', '17:00', '20:00')
-
-# default reminder
-fiveMins = ["Baru saja kulihat si tampan 😳\nSelain tinggi, dia pun pandai 😍\nPenuhi hari dengan senyuman 🌻\nYuk absensi 5 menit lagi ✨\n\nSemangat Pagi! 🔥",
-            "Semangat Pagi! 🔥\n\nSama seperti ayang yang rutin mengingatkan makan, bot ini juga akan mengingatkan kamu untuk absensi 5 menit lagi 😚",
-            "Kamu mau aku kasih tahu sesuatu ga? 👉🏻👈🏻\nSebenernya, 5 menit lagi waktunya absensi 😗\nJangan lupa, ya ✨\n\nSemangat Pagi! 🔥",
-            "Kak, aku sudah lama memendam rasa ini 🥺\nTolong izinkan aku untuk mengingatkan kalau 5 menit lagi waktunya absensi 😆\n\nSemangat Pagi! 🔥",
-            "Rencang-rencang, absensi 5 menit malih, nggih 😊\n\nSemangat Pagi! 🔥"]
-morning = ["Selamat Pagi, Semangat Pagi! 🔥\n\nSudah jam 8 pagi, yuk buka aplikasi SUPER HANA untuk absensi ✍🏻",
-           "Sugeng enjang 🌤\nYok rencang-rencang absensi riyen wonten aplikasi SUPER HANA ✍🏻\n\nSemangat Pagi! 🔥",
-           "Makan sate hangat-hangat 🍢\nTiba-tiba turun hujan lebat ⛈\nPagi-pagi penuh semangat 🔥\nYuk absensi, sudah jam 8 tepat ✍🏻",
-           "Semangat Pagi! 🔥\n\nCuma mau ngingetin, jangan lupa absensi di aplikasi SUPER HANA, ya 🤗\nPastikan absensi sudah tercatat di sistem ✍🏻",
-           "Pagi, Kak! 🔥\n\nKakak tahu ga persamaan sarapan sama absensi di aplikasi SUPER HANA? 🤔\nIya, sama-sama penting❗️\nNah, jangan sampai lupa dua-duanya, ya 😊"]
-afternoon = ["Sugeng sonten 🌥\nYok rencang-rencang absensi riyen wonten aplikasi SUPER HANA ✍🏻\n\nSemangat Pagi! 🔥",
-             "Selamat Sore, Semangat Pagi! 🔥\n\nIzin untuk mengingatkan, Kak, jangan lupa absensi di aplikasi SUPER HANA ya 😊",
-             "Sudah lama tak bertemu 😔\nAku masih menunggumu di sini 🥺\nSemangat pagi selalu 🔥\nJangan lupa absensi sore ini ✨",
-             "Sore, Kak 👋🏻\nJangan lupa makan, ya\nJaga kesehatan dan jangan lupa juga absensi sore hari ini di aplikasi SUPER HANA, oke? 🤗",
-             "Kak, ada yang mau aku omongin 🤫\nIni udah jam 5 sore, yuk buka aplikasi SUPER HANA buat absensi dulu 😆\n\nSemangat Pagi! 🔥\n"]
-night = ["Banyak uang jangan dihambur 💸\nMengasah otak bermain catur ♟\nBuat kamu yang lagi lembur 🥱\nAbsensi dulu sebelum tidur 😴\n\nSemangat Pagi! 🔥",
-         "Sugeng ndalu 🌝\nRencang-rencang ingkang lembur, absensi riyen wonten aplikasi SUPER HANA, nggih 😊\n\nSemangat Pagi! 🔥",
-         "Selamat Malam, Semangat Pagi! 🔥\n\nBuat kakak yang lagi lembur, jangan lupa absensi dulu di aplikasi SUPER HANA, ya ✨",
-         "Malam, Kak 👋🏻\n\nUdah absensi, belum?\nKalau belum, absensi dulu yaa 🤗\nJangan sampai lupa❗️\n\nSemangat Pagi! 🔥",
-         "Semangat Pagi, Kakaak! 🔥\nUdah jam 8 malem nih ternyata, waktunya absensi ✍🏻\nJangan lupa, ya! ✨"]
 
 @bot.message_handler(commands=['start'])
 async def start(message) :
@@ -58,17 +42,17 @@ async def start(message) :
                            \nTekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.\
                            \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
     
-    ## print(chatID)
+    print(chatID)
     
     # kolom id di GSS
-    id = ws.col_values(1)
+    id = sheet1.col_values(1)
 
     # jika user adalah user baru
     if str(chatID) not in id :
         # menambahkan chat ID dan username ke GSS
         row = len(id) + 1
-        ws.update_cell(row, 1, chatID)
-        ws.update_cell(row, 2, user)
+        sheet1.update_cell(row, 1, chatID)
+        sheet1.update_cell(row, 2, user)
         
         # memulai state inputData
         await bot.set_state(messageID, States.inputData, chatID)
@@ -82,14 +66,12 @@ async def start(message) :
 
 @bot.message_handler(state='*', commands='cancel')
 async def cancel(message):
-    id = ws.col_values(1)
+    id = sheet1.col_values(1)
     chatID = message.chat.id
     messageID = message.from_user.id
 
     cell = id.index(str(chatID)) + 1
-    dataUser = ws.row_values(cell)
-
-    print(dataUser)
+    dataUser = sheet1.row_values(cell)
 
     if dataUser[2] == '' :
         await bot.send_message(chatID, '🚫 Kamu harus melengkapi data terlebih dahulu.')
@@ -103,7 +85,7 @@ async def inputData(message) :
     messageID = message.from_user.id
     
     # kolom id di GSS
-    id = ws.col_values(1)
+    id = sheet1.col_values(1)
 
     # data input dari user
     async with bot.retrieve_data(messageID, chatID) as data:
@@ -119,13 +101,13 @@ async def inputData(message) :
         if (nik.isdigit() and len(nik) in range (6, 9)) and (nomorHp.isdigit() and len(nomorHp) >= 10) :
             # menambahkan atau meng-update data user di GSS
             cell = id.index(str(chatID)) + 1
-            ws.update_cell(cell, 1, chatID)
-            ws.update_cell(cell, 2, user)
-            ws.update_cell(cell, 3, nama)
-            ws.update_cell(cell, 4, "'" + nik)
-            ws.update_cell(cell, 5, "'" + nomorHp)
+            sheet1.update_cell(cell, 1, chatID)
+            sheet1.update_cell(cell, 2, user)
+            sheet1.update_cell(cell, 3, nama)
+            sheet1.update_cell(cell, 4, "'" + nik)
+            sheet1.update_cell(cell, 5, "'" + nomorHp)
 
-            await bot.reply_to(message, f'Terima kasih, data telah berhasil ditambahkan ✅')
+            await bot.reply_to(message, f'Data berhasil ditambahkan ✅')
 
             # mengakhiri state inputData
             await bot.delete_state(messageID, chatID)
@@ -140,19 +122,17 @@ async def inputData(message) :
         await bot.reply_to(message, '❌ Pastikan pesan ini terdiri dari 3 baris data.')
 
 @bot.message_handler(commands=['cekData'])
-async def cek(message) :
+async def cekData(message) :
     chatID = message.chat.id
 
     # kolom id di GSS
-    id = ws.col_values(1)
+    id = sheet1.col_values(1)
     
     # jika chat ID ada di data GSS
     if str(chatID) in id :
         # mengambil data user berdasarkan chat ID
         cell = id.index(str(chatID)) + 1
-        dataUser = ws.row_values(cell)
-
-        print(dataUser)
+        dataUser = sheet1.row_values(cell)
 
         # jika data user di GSS belum lengkap
         if dataUser[2] == '' :
@@ -160,7 +140,8 @@ async def cek(message) :
                 dataUser[i] = '-'
 
         # mengirim data user
-        await bot.send_message(chatID, f'Username: @{dataUser[1]}\
+        await bot.send_message(chatID, f'— Data Pengguna —\
+                                        \n\nUsername: @{dataUser[1]}\
                                         \n\nNama: {dataUser[2]}\
                                         \n\nNomor Induk Karyawan: {dataUser[3]}\
                                         \n\nNomor Hp: {dataUser[4]}')
@@ -170,7 +151,7 @@ async def cek(message) :
     else :
         await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
 
-# tombol "Sudah" dan "Belum"
+# tombol 'Sudah' dan 'Belum'
 async def answer() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
@@ -186,7 +167,7 @@ async def update(message) :
     messageID = message.from_user.id
     
     # kolom id di GSS
-    id = ws.col_values(1)
+    id = sheet1.col_values(1)
 
     # jika chat ID ada di data GSS
     if str(chatID) in id :
@@ -201,17 +182,17 @@ async def update(message) :
 async def callback_query(call) :
     global column
 
-    # jika user menjawab "Sudah"
+    # jika user menjawab 'Sudah'
     if call.data == 'sdh' :
         await bot.send_message(chatID, 'Silakan isi data-data berikut:\
-                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
-                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+                               \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                               \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                               \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+        await bot.send_message(chatID, '‼️ Tekan /cancel untuk membatalkan proses.')
         ## await bot.edit_message_reply_markup(inline_message_id=messageID, reply_markup=None)
         await bot.set_state(messageID, States.inputData, chatID)
     
-    # jika user menjawab "Belum"
+    # jika user menjawab 'Belum'
     elif call.data == 'blm' :
         await bot.send_message(chatID, '⚠️ Lakukan /cekData terlebih dahulu.')
 
@@ -221,20 +202,43 @@ async def callback_query(call) :
 
         # jika user ingin custom reminder absensi pagi
         if call.data == 'morning' :
-            column = 6
+            column = 2
 
         # jika user ingin custom reminder absensi sore
         elif call.data == 'afternoon' :
-            column = 7
+            column = 3
 
         # jika user ingin custom reminder absensi malam
         elif call.data == 'night' :
-            column = 8
+            column = 4
         
         # memulai state customMsg
         await bot.set_state(messageID, States.customMsg, chatID)
+    
+    # -- bagian bawah ini buat add reminder messages (admin only) --
+    elif call.data in ['fiveMins', 'Morning', 'Afternoon', 'Night'] :
+        await bot.send_message(chatID, '💬 Silakan tambahkan pesan reminder absensi untuk semua user.')
 
-# Pilihan "8 Pagi", "5 Sore", dan "8 Malam"
+        # jika admin ingin menambahkan reminder absensi kurang 5 menit
+        if call.data == 'fiveMins' :
+            column = 1
+        
+        # jika admin ingin menambahkan reminder absensi pagi
+        elif call.data == 'Morning' :
+            column = 2
+
+        # jika admin ingin menambahkan reminder absensi sore
+        elif call.data == 'Afternoon' :
+            column = 3
+
+        # jika admin ingin menambahkan reminder absensi malam
+        elif call.data == 'Night' :
+            column = 4
+        
+        # memulai state addMsg
+        await bot.set_state(messageID, States.addMsg, chatID)
+
+# Pilihan '8 Pagi', '5 Sore', dan '8 Malam'
 async def options() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 3
@@ -243,8 +247,8 @@ async def options() :
                InlineKeyboardButton('8 Malam', callback_data='night'))
     return markup
 
-@bot.message_handler(commands=['customMessage'])
-async def customMsg(message) :
+@bot.message_handler(commands=['customReminder'])
+async def customReminder(message) :
     global chatID, messageID
 
     chatID = message.chat.id
@@ -254,7 +258,7 @@ async def customMsg(message) :
 
 @bot.message_handler(state=States.customMsg)
 async def customMsg(message) :
-    id = ws.col_values(1)
+    id = sheet3.col_values(1)
     chatID = message.chat.id
     messageID = message.from_user.id
 
@@ -266,7 +270,7 @@ async def customMsg(message) :
     if str(chatID) in id :
         # menambahkan custom reminder ke GSS
         cell = id.index(str(chatID)) + 1
-        ws.update_cell(cell, column, data['customMsg'])
+        sheet3.update_cell(cell, column, data['customMsg'])
 
         await bot.send_message(chatID, 'Custom reminder berhasil diterapkan ✅')
 
@@ -280,18 +284,156 @@ async def customMsg(message) :
         # mengakhiri state customMsg
         await bot.delete_state(messageID, chatID)
 
+@bot.message_handler(commands=['cekCustom'])
+async def cekCustom(message) :
+    chatID = message.chat.id
+
+    # kolom id di GSS
+    id = sheet3.col_values(1)
+    
+    # jika chat ID ada di data GSS
+    if str(chatID) in id :
+        # mengambil data user berdasarkan chat ID
+        cell = id.index(str(chatID)) + 1
+        dataUser = sheet3.row_values(cell)
+
+        # mengirim custom reminder user
+        await bot.send_message(chatID, f'— Custom Reminder —\
+                                        \n\n8 Pagi : \n{dataUser[1]}\
+                                        \n\n5 Sore : \n{dataUser[2]}\
+                                        \n\n8 Malam : \n{dataUser[3]}')
+
+        if (dataUser[1] == '-') and (dataUser[2] == '-') and (dataUser[3] == '-') :
+            await bot.send_message(chatID, '⚠️ Tekan /customReminder untuk membuat custom reminder.')
+        else :
+            await bot.send_message(chatID, '‼️ Tekan /reset untuk menghapus semua custom remindermu.')
+    
+    # jika chat ID tidak ada di data GSS
+    else :
+        await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+
+@bot.message_handler(commands=['reset'])
+async def reset(message) :
+    chatID = message.chat.id
+
+    # kolom id di GSS
+    id = sheet3.col_values(1)
+    
+    # jika chat ID ada di data GSS
+    if str(chatID) in id :
+        # mengambil data user berdasarkan chat ID
+        cell = id.index(str(chatID)) + 1
+        for i in range(2, 5) :
+            sheet3.update_cell(cell, i, '-')
+        
+        await bot.send_message(chatID, 'Custom reminder berhasil direset ✅')
+    
+    # jika chat ID tidak ada di data GSS
+    else :
+        await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+
+# Pilihan 'Kurang 5 Menit', '8 Pagi', '5 Sore', dan '8 Malam'
+async def choices() :
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 2
+    markup.add(InlineKeyboardButton('Kurang 5 Menit', callback_data='fiveMins'),
+               InlineKeyboardButton('8 Pagi', callback_data='Morning'),
+               InlineKeyboardButton('5 Sore', callback_data='Afternoon'),
+               InlineKeyboardButton('8 Malam', callback_data='Night'))
+    return markup
+
+@bot.message_handler(commands=['addMessage'])
+async def addMessage(message) :
+    global chatID, messageID
+
+    chatID = message.chat.id
+    messageID = message.from_user.id
+
+    if chatID in admin :
+        await bot.send_message(chatID, 'Pilih salah satu dari jadwal reminder di bawah ini.', reply_markup = await choices())
+
+@bot.message_handler(state=States.addMsg)
+async def addMsg(message) :
+    template = sheet2.col_values(column)
+    chatID = message.chat.id
+    messageID = message.from_user.id
+
+    # mengambil input dari admin
+    async with bot.retrieve_data(messageID, chatID) as data:
+        data['addMsg'] = message.text
+
+    # jika chat ID ada di daftar admin
+    if chatID in admin :
+        # menambahkan pesan reminder baru ke GSS
+        row = len(template) + 1
+        sheet2.update_cell(row, column, data['addMsg'])
+
+        await bot.send_message(chatID, 'Pesan reminder berhasil ditambahkan ✅')
+
+        # mengakhiri state addMsg
+        await bot.delete_state(messageID, chatID)
+    
+    # jika chat ID tidak ada di data GSS
+    else :
+        await bot.send_message(chatID, '🚫 Hanya admin yang dapat menambahkan pesan reminder baru.')
+
+        # mengakhiri state addMsg
+        await bot.delete_state(messageID, chatID)
+
+@bot.message_handler(commands=['broadcast'])
+async def broadcast(message) :
+    chatID = message.chat.id
+    messageID = message.from_user.id
+
+    if chatID in admin :
+        await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan kepada semua user.')
+        await bot.set_state(messageID, States.broadcast, chatID)
+
+@bot.message_handler(state=States.broadcast)
+async def broadcastMsg(message) :
+    id = sheet1.col_values(1)
+    chatID = message.chat.id
+    messageID = message.from_user.id
+
+    # mengambil input dari admin
+    async with bot.retrieve_data(messageID, chatID) as data:
+        data['broadcast'] = message.text
+
+    try :
+        # jika chat ID ada di daftar admin
+        for i in id[1:] :
+            # mengirim pesan broadcast ke semua user
+            await bot.send_message(i, data['broadcast'])
+
+        await bot.send_message(chatID, 'Pesan berhasil disiarkan ✅')
+    except :
+        await bot.send_message(chatID, '❌ Pesan gagal disiarkan.')
+
+    # mengakhiri state broadcast
+    await bot.delete_state(messageID, chatID)
+
 bot.add_custom_filter(asyncio_filters.StateFilter(bot))
 
 @bot.message_handler(commands=['help'])
 async def help(message) :
     chatID = message.chat.id
-
-    await bot.send_message(chatID, 'Berikut daftar command dari bot ini:\
-                                    \n/start -- Memulai bot\
-                                    \n/cekData -- Memeriksa data pengguna\
-                                    \n/updateData -- Memperbarui data pengguna\
-                                    \n/customMessage -- Custom pesan pengingat\
-                                    \n/cancel -- Membatalkan proses input data')
+    
+    if chatID in admin :
+        await bot.send_message(chatID, 'Berikut daftar command dari bot ini:\
+                                    \n/start — Memulai bot\
+                                    \n/cekData — Mengecek data pengguna\
+                                    \n/updateData — Memperbarui data pengguna\
+                                    \n/customReminder — Custom pesan pengingat\
+                                    \n/cekCustom — Mengecek custom reminder\
+                                    \n/addMessage — Menambahkan pesan reminder\
+                                    \n/broadcast — Menyiarkan pesan ke semua pengguna')
+    else :
+        await bot.send_message(chatID, 'Berikut daftar command dari bot ini:\
+                                    \n/start — Memulai bot\
+                                    \n/cekData — Mengecek data pengguna\
+                                    \n/updateData — Memperbarui data pengguna\
+                                    \n/customReminder — Custom pesan pengingat\
+                                    \n/cekCustom — Mengecek custom reminder')
 
 # untuk meng-handle pesan user
 @bot.message_handler()
@@ -300,20 +442,26 @@ async def anything(message) :
     await bot.send_message(chatID, 'Tekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.')
 
 async def reminder(day, time) :
-    global fiveMins, morning, afternoon, night, id, idDone
+    global id, idDone
+
+    fiveMins = sheet2.col_values(1)
+    morning = sheet2.col_values(2)
+    afternoon = sheet2.col_values(3)
+    night = sheet2.col_values(4)
 
     # mengambil pesan secara random dari template pesan
-    randFiveMins = random.choice(fiveMins)
-    randMorning = random.choice(morning)
-    randAfternoon = random.choice(afternoon)
-    randNight = random.choice(night)
+    randFiveMins = random.choice(fiveMins[1:])
+    randMorning = random.choice(morning[1:])
+    randAfternoon = random.choice(afternoon[1:])
+    randNight = random.choice(night[1:])
 
     # hari libur
     weekend = [5, 6]
 
     # jika hari ini adalah hari kerja
     if day not in weekend :
-        id = ws.col_values(1)
+        id = sheet1.col_values(1)
+        
         # jika waktu absensi kurang 5 menit
         if time in fiveTo :
             for i in id[1:] :
@@ -326,7 +474,7 @@ async def reminder(day, time) :
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
-                    await custom(i, 5, randMorning)
+                    await custom(i, 2, randMorning)
 
                     idDone.append(i)
         
@@ -335,36 +483,36 @@ async def reminder(day, time) :
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
-                    await custom(i, 6, randAfternoon)
+                    await custom(i, 3, randAfternoon)
 
                     idDone.append(i)
-            
+        
         # jika waktu absensi adalah jam 8 malam
         elif time == exactTime[2] :
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
-                    await custom(i, 7, randNight)
+                    await custom(i, 4, randNight)
 
                     idDone.append(i)
         
-        print(idDone)
         # mereset list idDone jika semua user sudah menerima reminder
-        if len(idDone) == len(id[1:]) :
+        if len(idDone) == len(admin) :
             idDone = []
-
+    
     # mereset list idDone pada hari libur
     else :
         idDone = []
 
 # fungsi untuk memeriksa custom reminder di GSS
-async def custom(chatID, column, random) :
+async def custom(chatID, column, text) :
     cell = id.index(str(chatID)) + 1
-    cell = ws.row_values(cell)
-    if cell[column] != '-' :
-        random = cell[column]
+    dataUser = sheet3.row_values(cell)
 
-    await bot.send_message(chatID, random)      
+    if dataUser[column] != '-' :
+        text = dataUser[column]
+
+    await bot.send_message(chatID, text)      
 
 async def main() :
     while True :
@@ -378,11 +526,12 @@ async def main() :
         # memanggil fungsi reminder
         await reminder(today, currentTime)
 
-        ## print('*', currentTime, '*')
-        ## print('-', today, '-')
-
         second = time.strftime('%S')
         second = int(second)
+
+        clock = time.strftime('%H:%M:%S')
+        print('*', clock, '*')
+        print('—', today, '—')
 
         # waktu tunggu loop
         await asyncio.sleep(60 - second)
@@ -390,8 +539,8 @@ async def main() :
 # run using asynchronous mode
 try :
     loop = asyncio.new_event_loop()
-    loop.create_task(main(), name="Check Time")
-    loop.create_task(bot.polling(), name="Bot Commands")
+    loop.create_task(main(), name='Time Checking')
+    loop.create_task(bot.polling(), name='Bot Commands')
     loop.run_forever()
 except :
     pass
