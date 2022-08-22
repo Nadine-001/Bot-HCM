@@ -1,3 +1,4 @@
+from msilib.sequence import AdminUISequence
 from telebot.async_telebot import AsyncTeleBot
 from telebot import asyncio_filters
 from telebot.asyncio_storage import StateMemoryStorage
@@ -52,6 +53,7 @@ async def start(message) :
         # menambahkan chat ID dan username ke GSS
         row = len(id) + 1
         sheet1.update_cell(row, 1, chatID)
+        sheet3.update_cell(row, 1, chatID)
         sheet1.update_cell(row, 2, user)
         
         # memulai state inputData
@@ -188,7 +190,7 @@ async def callback_query(call) :
                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
-        await bot.send_message(chatID, '‼️ Tekan /cancel untuk membatalkan proses.')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
         ## await bot.edit_message_reply_markup(inline_message_id=messageID, reply_markup=None)
         await bot.set_state(messageID, States.inputData, chatID)
     
@@ -199,6 +201,7 @@ async def callback_query(call) :
     # -- bagian bawah ini buat custom reminder messages --
     elif call.data in ['morning', 'afternoon', 'night'] :
         await bot.send_message(chatID, '💬 Silakan kirim custom reminder absensimu.')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
 
         # jika user ingin custom reminder absensi pagi
         if call.data == 'morning' :
@@ -218,6 +221,7 @@ async def callback_query(call) :
     # -- bagian bawah ini buat add reminder messages (admin only) --
     elif call.data in ['fiveMins', 'Morning', 'Afternoon', 'Night'] :
         await bot.send_message(chatID, '💬 Silakan tambahkan pesan reminder absensi untuk semua user.')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
 
         # jika admin ingin menambahkan reminder absensi kurang 5 menit
         if call.data == 'fiveMins' :
@@ -306,7 +310,7 @@ async def cekCustom(message) :
         if (dataUser[1] == '-') and (dataUser[2] == '-') and (dataUser[3] == '-') :
             await bot.send_message(chatID, '⚠️ Tekan /customReminder untuk membuat custom reminder.')
         else :
-            await bot.send_message(chatID, '‼️ Tekan /reset untuk menghapus semua custom remindermu.')
+            await bot.send_message(chatID, '⚠️ Tekan /reset untuk menghapus semua custom remindermu.')
     
     # jika chat ID tidak ada di data GSS
     else :
@@ -342,8 +346,8 @@ async def choices() :
                InlineKeyboardButton('8 Malam', callback_data='Night'))
     return markup
 
-@bot.message_handler(commands=['addMessage'])
-async def addMessage(message) :
+@bot.message_handler(commands=['addReminder'])
+async def addReminder(message) :
     global chatID, messageID
 
     chatID = message.chat.id
@@ -387,6 +391,7 @@ async def broadcast(message) :
 
     if chatID in admin :
         await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan kepada semua user.')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
         await bot.set_state(messageID, States.broadcast, chatID)
 
 @bot.message_handler(state=States.broadcast)
@@ -418,22 +423,19 @@ bot.add_custom_filter(asyncio_filters.StateFilter(bot))
 async def help(message) :
     chatID = message.chat.id
     
+    command = 'Berikut daftar command dari bot ini:\
+               \n/start — Memulai bot\
+               \n/cekData — Mengecek data pengguna\
+               \n/updateData — Memperbarui data pengguna\
+               \n/customReminder — Custom pesan pengingat\
+               \n/cekCustom — Mengecek custom reminder'
+
     if chatID in admin :
-        await bot.send_message(chatID, 'Berikut daftar command dari bot ini:\
-                                    \n/start — Memulai bot\
-                                    \n/cekData — Mengecek data pengguna\
-                                    \n/updateData — Memperbarui data pengguna\
-                                    \n/customReminder — Custom pesan pengingat\
-                                    \n/cekCustom — Mengecek custom reminder\
-                                    \n/addMessage — Menambahkan pesan reminder\
-                                    \n/broadcast — Menyiarkan pesan ke semua pengguna')
+        await bot.send_message(chatID, f'{command}\
+                                         \n/addReminder — Menambahkan pesan reminder\
+                                         \n/broadcast — Menyiarkan pesan ke semua pengguna')
     else :
-        await bot.send_message(chatID, 'Berikut daftar command dari bot ini:\
-                                    \n/start — Memulai bot\
-                                    \n/cekData — Mengecek data pengguna\
-                                    \n/updateData — Memperbarui data pengguna\
-                                    \n/customReminder — Custom pesan pengingat\
-                                    \n/cekCustom — Mengecek custom reminder')
+        await bot.send_message(chatID, command)
 
 # untuk meng-handle pesan user
 @bot.message_handler()
@@ -467,14 +469,15 @@ async def reminder(day, time) :
             for i in id[1:] :
                 if i not in idDone :
                     await bot.send_message(i, randFiveMins)
-                    idDone.append(i)
 
+                    idDone.append(i)
+        
         # jika waktu absensi adalah jam 8 pagi
         elif time == exactTime[0] :
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
-                    await custom(i, 2, randMorning)
+                    await custom(i, 1, randMorning)
 
                     idDone.append(i)
         
@@ -483,7 +486,7 @@ async def reminder(day, time) :
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
-                    await custom(i, 3, randAfternoon)
+                    await custom(i, 2, randAfternoon)
 
                     idDone.append(i)
         
@@ -492,7 +495,7 @@ async def reminder(day, time) :
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
-                    await custom(i, 4, randNight)
+                    await custom(i, 3, randNight)
 
                     idDone.append(i)
         
