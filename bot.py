@@ -1,4 +1,3 @@
-from msilib.sequence import AdminUISequence
 from telebot.async_telebot import AsyncTeleBot
 from telebot import asyncio_filters
 from telebot.asyncio_storage import StateMemoryStorage
