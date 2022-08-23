@@ -18,17 +18,19 @@ class States(StatesGroup):
 # link ke GSS
 gs = gspread.service_account(filename='presensi-reminder.json')
 sh = gs.open_by_key('1kNYfAQGDcZD-EcJQOfkFKErJ_QfilyQH4NwNxLAe5OM')
+
+# sheets excel
 sheet1 = sh.worksheet("user_data")
 sheet2 = sh.worksheet("template_messages")
 sheet3 = sh.worksheet("custom_messages")
 
 # chat ID admin
-admin = (1372954700, 5033311508, 5142972565, 117145654, 116126490)
+admin = (1372954700, 5033311508, 5142972565, 117145654, 73937262)
 
 idDone = []
 
 # waktu untuk trigger pesan reminder
-fiveTo = ('07:55', '16:55', '19:55')
+## fiveTo = ('07:55', '16:55', '19:55')
 exactTime = ('08:00', '17:00', '20:00')
 
 @bot.message_handler(commands=['start'])
@@ -74,10 +76,10 @@ async def cancel(message):
     cell = id.index(str(chatID)) + 1
     dataUser = sheet1.row_values(cell)
 
-    if dataUser[2] == '' :
-        await bot.send_message(chatID, '🚫 Kamu harus melengkapi data terlebih dahulu.')
-    else :
-        await bot.delete_state(messageID, chatID)
+    ## if dataUser[2] == '' :
+    ##     await bot.send_message(chatID, '🚫 Kamu harus melengkapi data terlebih dahulu.')
+    ## else :
+    await bot.delete_state(messageID, chatID)
 
 @bot.message_handler(state=States.inputData)
 async def inputData(message) :
@@ -190,7 +192,7 @@ async def callback_query(call) :
                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-        ## await bot.edit_message_reply_markup(inline_message_id=messageID, reply_markup=None)
+        ## await bot.edit_message_reply_markup(inline_from_user.id=messageID, reply_markup=None)
         await bot.set_state(messageID, States.inputData, chatID)
     
     # jika user menjawab 'Belum'
@@ -393,22 +395,39 @@ async def broadcast(message) :
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
         await bot.set_state(messageID, States.broadcast, chatID)
 
-@bot.message_handler(state=States.broadcast)
+@bot.message_handler(state=States.broadcast, content_types=['text', 'photo', 'document', 'video'])
 async def broadcastMsg(message) :
     id = sheet1.col_values(1)
     chatID = message.chat.id
     messageID = message.from_user.id
 
     # mengambil input dari admin
-    async with bot.retrieve_data(messageID, chatID) as data:
-        data['broadcast'] = message.text
-
+    async with bot.retrieve_data(messageID, chatID) as data :
+        if message.content_type == 'text' :
+            data['broadcast'] = message.text
+            type = 1
+        elif message.content_type == 'photo' :
+            data['broadcast'] = message.photo[0].file_id
+            type = 2
+        elif message.content_type == 'document' :
+            data['broadcast'] = message.document.file_id
+            type = 3
+        elif message.content_type == 'video' :
+            data['broadcast'] = message.video.file_id
+            type = 4
+    
     try :
-        # jika chat ID ada di daftar admin
+        # mengirim pesan broadcast ke semua user
         for i in id[1:] :
-            # mengirim pesan broadcast ke semua user
-            await bot.send_message(i, data['broadcast'])
-
+            if type == 1 :
+                await bot.send_message(i, data['broadcast'])
+            elif type == 2 :
+                await bot.send_photo(i, data['broadcast'], message.caption)
+            elif type == 3 :
+                await bot.send_document(i, data['broadcast'], caption=message.caption)
+            elif type == 4 :
+                await bot.send_video(i, data['broadcast'], caption=message.caption)
+            
         await bot.send_message(chatID, 'Pesan berhasil disiarkan ✅')
     except :
         await bot.send_message(chatID, '❌ Pesan gagal disiarkan.')
@@ -445,34 +464,21 @@ async def anything(message) :
 async def reminder(day, time) :
     global id, idDone
 
-    fiveMins = sheet2.col_values(1)
     morning = sheet2.col_values(2)
     afternoon = sheet2.col_values(3)
     night = sheet2.col_values(4)
-
-    # mengambil pesan secara random dari template pesan
-    randFiveMins = random.choice(fiveMins[1:])
-    randMorning = random.choice(morning[1:])
-    randAfternoon = random.choice(afternoon[1:])
-    randNight = random.choice(night[1:])
 
     # hari libur
     weekend = [5, 6]
 
     # jika hari ini adalah hari kerja
     if day not in weekend :
-        id = sheet1.col_values(1)
-        
-        # jika waktu absensi kurang 5 menit
-        if time in fiveTo :
-            for i in id[1:] :
-                if i not in idDone :
-                    await bot.send_message(i, randFiveMins)
-
-                    idDone.append(i)
+        id = sheet3.col_values(1)
         
         # jika waktu absensi adalah jam 8 pagi
-        elif time == exactTime[0] :
+        if time == exactTime[0] :
+            randMorning = random.choice(morning[1:])
+
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
@@ -482,6 +488,8 @@ async def reminder(day, time) :
         
         # jika waktu absensi adalah jam 5 sore
         elif time == exactTime[1] :
+            randAfternoon = random.choice(afternoon[1:])
+
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
@@ -491,17 +499,23 @@ async def reminder(day, time) :
         
         # jika waktu absensi adalah jam 8 malam
         elif time == exactTime[2] :
+            randNight = random.choice(night[1:])
+
             for i in id[1:] :
                 if i not in idDone :
                     # memanggil fungsi custom
                     await custom(i, 3, randNight)
 
                     idDone.append(i)
-        
+
+        print('#', idDone, '#')
+
         # mereset list idDone jika semua user sudah menerima reminder
-        if len(idDone) == len(admin) :
+        if len(idDone) == len(id[1:]) :
             idDone = []
-    
+        
+        print('#', idDone, '#')
+        
     # mereset list idDone pada hari libur
     else :
         idDone = []
@@ -534,6 +548,7 @@ async def main() :
         clock = time.strftime('%H:%M:%S')
         print('*', clock, '*')
         print('—', today, '—')
+        print()
 
         # waktu tunggu loop
         await asyncio.sleep(60 - second)
