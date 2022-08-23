@@ -51,11 +51,10 @@ async def start(message) :
 
     # jika user adalah user baru
     if str(chatID) not in id :
-        # menambahkan chat ID dan username ke GSS
+        # menambahkan chat ID ke GSS
         row = len(id) + 1
         sheet1.update_cell(row, 1, chatID)
         sheet3.update_cell(row, 1, chatID)
-        sheet1.update_cell(row, 2, user)
         
         # memulai state inputData
         await bot.set_state(messageID, States.inputData, chatID)
@@ -66,6 +65,10 @@ async def start(message) :
                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+    else :
+        # menambahkan username ke GSS
+        cell = id.index(str(chatID)) + 1
+        sheet1.update_cell(cell, 2, user)
 
 @bot.message_handler(state='*', commands='cancel')
 async def cancel(message):
@@ -84,7 +87,7 @@ async def cancel(message):
 @bot.message_handler(state=States.inputData)
 async def inputData(message) :
     chatID = message.chat.id
-    user = message.from_user.username
+    user = '@' + message.from_user.username
     messageID = message.from_user.id
     
     # kolom id di GSS
@@ -127,7 +130,7 @@ async def inputData(message) :
 @bot.message_handler(commands=['cekData'])
 async def cekData(message) :
     chatID = message.chat.id
-    user = message.from_user.username
+    user = '@' + message.from_user.username
 
     # kolom id di GSS
     id = sheet1.col_values(1)
@@ -169,7 +172,7 @@ async def update(message) :
     global chatID, messageID
 
     chatID = message.chat.id
-    user = message.from_user.username
+    user = '@' + message.from_user.username
     messageID = message.from_user.id
     
     # kolom id di GSS
