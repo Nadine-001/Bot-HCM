@@ -36,7 +36,7 @@ exactTime = ('08:00', '17:00', '20:00')
 @bot.message_handler(commands=['start'])
 async def start(message) :
     chatID = message.chat.id
-    user = message.from_user.username
+    user = '@' + message.from_user.username
     messageID = message.from_user.id
 
     await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
@@ -127,6 +127,7 @@ async def inputData(message) :
 @bot.message_handler(commands=['cekData'])
 async def cekData(message) :
     chatID = message.chat.id
+    user = message.from_user.username
 
     # kolom id di GSS
     id = sheet1.col_values(1)
@@ -135,6 +136,7 @@ async def cekData(message) :
     if str(chatID) in id :
         # mengambil data user berdasarkan chat ID
         cell = id.index(str(chatID)) + 1
+        sheet1.update_cell(cell, 2, user)
         dataUser = sheet1.row_values(cell)
 
         # jika data user di GSS belum lengkap
@@ -144,7 +146,7 @@ async def cekData(message) :
 
         # mengirim data user
         await bot.send_message(chatID, f'— Data Pengguna —\
-                                        \n\nUsername: @{dataUser[1]}\
+                                        \n\nUsername: {dataUser[1]}\
                                         \n\nNama: {dataUser[2]}\
                                         \n\nNomor Induk Karyawan: {dataUser[3]}\
                                         \n\nNomor Hp: {dataUser[4]}')
@@ -167,6 +169,7 @@ async def update(message) :
     global chatID, messageID
 
     chatID = message.chat.id
+    user = message.from_user.username
     messageID = message.from_user.id
     
     # kolom id di GSS
@@ -174,6 +177,9 @@ async def update(message) :
 
     # jika chat ID ada di data GSS
     if str(chatID) in id :
+        cell = id.index(str(chatID)) + 1
+        sheet1.update_cell(cell, 2, user)
+
         await bot.send_message(chatID, 'Apakah kamu sudah melakukan pengecekan data?', reply_markup=await answer())
 
     # jika chat ID tidak ada di data GSS
@@ -185,6 +191,7 @@ async def update(message) :
 async def callback_query(call) :
     global column
 
+    # -- BAGIAN UPDATE DATA --
     # jika user menjawab 'Sudah'
     if call.data == 'sdh' :
         await bot.send_message(chatID, 'Silakan isi data-data berikut:\
@@ -192,14 +199,14 @@ async def callback_query(call) :
                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-        ## await bot.edit_message_reply_markup(inline_from_user.id=messageID, reply_markup=None)
+        
         await bot.set_state(messageID, States.inputData, chatID)
     
     # jika user menjawab 'Belum'
     elif call.data == 'blm' :
         await bot.send_message(chatID, '⚠️ Lakukan /cekData terlebih dahulu.')
 
-    # -- bagian bawah ini buat custom reminder messages --
+    # -- BAGIAN CUSTOM REMINDER --
     elif call.data in ['morning', 'afternoon', 'night'] :
         await bot.send_message(chatID, '💬 Silakan kirim custom reminder absensimu.')
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
@@ -219,7 +226,7 @@ async def callback_query(call) :
         # memulai state customMsg
         await bot.set_state(messageID, States.customMsg, chatID)
     
-    # -- bagian bawah ini buat add reminder messages (admin only) --
+    # -- BAGIAN ADD REMINDER (ADMIN ONLY) --
     elif call.data in ['fiveMins', 'Morning', 'Afternoon', 'Night'] :
         await bot.send_message(chatID, '💬 Silakan tambahkan pesan reminder absensi untuk semua user.')
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
@@ -366,24 +373,18 @@ async def addMsg(message) :
     # mengambil input dari admin
     async with bot.retrieve_data(messageID, chatID) as data:
         data['addMsg'] = message.text
-
-    # jika chat ID ada di daftar admin
-    if chatID in admin :
+    
+    try :
         # menambahkan pesan reminder baru ke GSS
         row = len(template) + 1
         sheet2.update_cell(row, column, data['addMsg'])
 
         await bot.send_message(chatID, 'Pesan reminder berhasil ditambahkan ✅')
-
-        # mengakhiri state addMsg
-        await bot.delete_state(messageID, chatID)
+    except :
+        await bot.send_message(chatID, '❌ Pesan reminder gagal ditambahkan.')
     
-    # jika chat ID tidak ada di data GSS
-    else :
-        await bot.send_message(chatID, '🚫 Hanya admin yang dapat menambahkan pesan reminder baru.')
-
-        # mengakhiri state addMsg
-        await bot.delete_state(messageID, chatID)
+    # mengakhiri state addMsg
+    await bot.delete_state(messageID, chatID)
 
 @bot.message_handler(commands=['broadcast'])
 async def broadcast(message) :
@@ -450,8 +451,8 @@ async def help(message) :
 
     if chatID in admin :
         await bot.send_message(chatID, f'{command}\
-                                         \n/addReminder — Menambahkan pesan reminder\
-                                         \n/broadcast — Menyiarkan pesan ke semua pengguna')
+                               \n/addReminder — Menambahkan pesan reminder\
+                               \n/broadcast — Menyiarkan pesan ke semua pengguna')
     else :
         await bot.send_message(chatID, command)
 
