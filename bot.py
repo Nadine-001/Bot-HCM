@@ -28,43 +28,61 @@ sheet3 = sh.worksheet("custom_messages")
 # chat ID admin
 admin = (1372954700, 5033311508, 5142972565, 117145654, 73937262)
 
-idDone = []
-
 @bot.message_handler(commands=['start'])
 async def start(message) :
     chatID = message.chat.id
     user = '@' + message.from_user.username
 
-    await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
-                           \n\nBot ini akan mengingatkanmu untuk absensi pada jam 8 pagi, 5 sore, dan 8 malam.\
-                           \nTekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.\
-                           \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
-    
-    # kolom id di GSS
-    id = sheet1.col_values(1)
-
-    # jika user adalah user baru
-    if str(chatID) not in id :
-        # menambahkan chat ID ke GSS
-        row = len(id) + 1
-        sheet1.update_cell(row, 1, chatID)
-        sheet3.update_cell(row, 1, chatID)
+    try :
+        await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
+                            \n\nBot ini akan mengingatkanmu untuk absensi pada jam 8 pagi, 5 sore, dan 8 malam.\
+                            \nTekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.\
+                            \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
+        print(f'user {chatID} started me, Sir.')
         
-        # memulai state inputData
-        await bot.set_state(chatID, States.inputData)
+        # kolom id di GSS
+        id = sheet1.col_values(1)
 
-        # request data ke user
-        await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu adalah pengguna baru.\
-                               \n\nMohon kesediaannya untuk mengisi data-data berikut:\
-                               \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
-                               \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                               \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
-    
-    # jika user bukan user baru
-    else :
-        # meng-update username di GSS
-        cell = id.index(str(chatID)) + 1
-        sheet1.update_cell(cell, 2, user)
+        # jika user adalah user baru
+        if str(chatID) not in id :
+            # menambahkan chat ID dan username ke GSS
+            row = len(id) + 1
+            sheet1.update_cell(row, 1, chatID)
+            sheet1.update_cell(row, 2, user)
+            sheet3.update_cell(row, 1, chatID)
+            for i in range(2, 5) :
+                sheet3.update_cell(row, i, '-')
+            
+            # memulai state inputData
+            await bot.set_state(chatID, States.inputData)
+            
+            # request data ke user
+            await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu adalah pengguna baru.\
+                                \n\nMohon kesediaannya untuk mengisi data-data berikut.\
+                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+        
+        # jika user bukan user baru
+        else :
+            # meng-update username di GSS
+            cell = id.index(str(chatID)) + 1
+            sheet1.update_cell(cell, 2, user)
+
+            dataUser = sheet1.row_values(cell)
+            if len(dataUser) < 5 :
+                # request data ke user
+                await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
+                                    \n\nMohon kesediaannya untuk mengisi data-data berikut.\
+                                    \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                                    \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                    \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+
+                # memulai state inputData
+                await bot.set_state(chatID, States.inputData)
+
+    except :
+        print("Something's wrong, Sir.")
 
 @bot.message_handler(state='*', commands='cancel')
 async def cancel(message):
@@ -204,7 +222,7 @@ async def customMsg(message) :
         data['customMsg'] = message.text
 
     # jika chat ID ada di data GSS
-    if str(chatID) in id :
+    if str(chatID) in id[1:] :
         # menambahkan custom reminder ke GSS
         cell = id.index(str(chatID)) + 1
         sheet3.update_cell(cell, column, data['customMsg'])
@@ -281,7 +299,7 @@ async def broadcast(message) :
 # state someUser
 @bot.message_handler(state=States.someUser)
 async def someUser(message) :
-    global target, users
+    global target, users, failedUsers
 
     chatID = message.chat.id
 
@@ -294,10 +312,14 @@ async def someUser(message) :
     
     # mengambil chat ID user menggunakan NIK
     users = []
+    failedUsers = []
     for i in data['someUser'] :
-        cell = nik.index(i) + 1
-        dataUser = sheet3.row_values(cell)
-        users.append(dataUser[0])
+        try :
+            cell = nik.index(i) + 1
+            dataUser = sheet3.row_values(cell)
+            users.append(dataUser[0])
+        except :
+            failedUsers.append(i)
     
     target = 'someUser'
 
@@ -305,7 +327,7 @@ async def someUser(message) :
     await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
     
     # memulai state bcMsg
-    await bot.set_state(chatID, States.bcMsg, )
+    await bot.set_state(chatID, States.bcMsg)
 
 # state bcMsg
 @bot.message_handler(state=States.bcMsg, content_types=['text', 'photo', 'document', 'video'])
@@ -322,30 +344,30 @@ async def bcMsg(message) :
         
         if type == 'text' :
             data['broadcast'] = message.text
-            ## type = 1
         elif type == 'photo' :
             data['broadcast'] = message.photo[0].file_id
-            ## type = 2
         elif type == 'document' :
             data['broadcast'] = message.document.file_id
-            ## type = 3
         elif type == 'video' :
             data['broadcast'] = message.video.file_id
-            ## type = 4
     
     try :
         # jika broadcast akan disiarkan ke user tertertu
         if target == 'someUser' :
             # memanggil fungsi send
             await send(users, data['broadcast'], message.caption)
-        
+
+            await bot.send_message(chatID, f'Pesan berhasil disiarkan ke {len(users)} pengguna ✅')
+
+            if len(failedUsers) != 0 :
+                await bot.send_message(chatID, f'Pengguna dengan NIK : {failedUsers} tidak ditemukan ‼️')
+
         # jika broadcast akan disiarkan ke semua user
         else :
             # memanggil fungsi send
             await send(id[1:], data['broadcast'], message.caption)
         
-        await bot.send_message(chatID, 'Pesan berhasil disiarkan ✅')
-    
+            await bot.send_message(chatID, 'Pesan berhasil disiarkan ✅')
     except :
         await bot.send_message(chatID, '❌ Pesan gagal disiarkan.')
 
@@ -353,9 +375,9 @@ async def bcMsg(message) :
     await bot.delete_state(chatID)
 
 # fungsi untuk mengirim broadcast ke user
-async def send(target, msg, capt) :
+async def send(targets, msg, capt) :
     # mengirim pesan broadcast ke user
-    for i in target :
+    for i in targets :
         if type == 'text' :
             await bot.send_message(i, msg)
         elif type == 'photo' :
@@ -373,7 +395,7 @@ async def callback_query(call) :
     # -- BAGIAN UPDATE DATA --
     # jika user menjawab 'Sudah'
     if call.data == 'sdh' :
-        await bot.send_message(chatID, 'Silakan isi data-data berikut:\
+        await bot.send_message(chatID, 'Silakan isi data-data berikut.\
                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
@@ -441,10 +463,10 @@ async def callback_query(call) :
         await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan.')
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
         
+        target = 'allUser'
+
         # memulai state bcMsg
         await bot.set_state(chatID, States.bcMsg)
-
-bot.add_custom_filter(asyncio_filters.StateFilter(bot))
 
 @bot.message_handler(commands=['cekCustom'])
 async def cekCustom(message) :
@@ -525,84 +547,92 @@ async def anything(message) :
     await bot.send_message(chatID, 'Tekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.')
 
 # fungsi untuk mengirim reminder absensi ke user
-async def reminder(day, time) :
-    global id, idDone
-
-    # template messages
-    morning = sheet2.col_values(2)
-    afternoon = sheet2.col_values(3)
-    night = sheet2.col_values(4)
-
+async def reminder(today, time) :
     # hari libur
-    weekend = [5, 6]
-    
+    weekend = (5, 6)
+
+    # hari Selasa dan Kamis
+    twoDays = (1, 3)
+
     # jika hari ini adalah hari kerja
-    if day not in weekend :
-        id = sheet3.col_values(1)
-        
+    if today not in weekend :
         # jika waktu absensi adalah jam 8 pagi
         if time == '08:00' :
             # mengambil pesan secara acak dari template message
+            morning = sheet2.col_values(2)
             randMorning = random.choice(morning[1:])
 
-            # memanggil fungsi reminderMsg
-            await reminderMsg(randMorning, 1)
-        
+            customMorning = sheet3.col_values(2)
+
+            await reminderMsg(randMorning, customMorning)
+
         # jika waktu absensi adalah jam 5 sore
         elif time == '17:00' :
             # mengambil pesan secara acak dari template message
+            afternoon = sheet2.col_values(3)
             randAfternoon = random.choice(afternoon[1:])
 
-            # memanggil fungsi reminderMsg
-            await reminderMsg(randAfternoon, 2)
-        
-        # jika waktu absensi adalah jam 8 malam
+            customAfternoon = sheet3.col_values(3)
+
+            await reminderMsg(randAfternoon, customAfternoon)
+
         elif time == '20:00' :
             # mengambil pesan secara acak dari template message
+            night = sheet2.col_values(4)
             randNight = random.choice(night[1:])
 
-            # memanggil fungsi reminderMsg
-            await reminderMsg(randNight, 3)
+            customNight = sheet3.col_values(4)
 
-        print('#', len(idDone), '#')
-        print('~', len(id[1:]), '~')
-        
-        # mereset list idDone jika semua user sudah menerima reminder
-        if len(idDone) == len(id[1:]) :
-            idDone = []
-        
-        print('#', len(idDone), '#')
-        print('~', len(id[1:]), '~')
-        
-    # mereset list idDone pada hari libur
-    else :
-        idDone = []
+            await reminderMsg(randNight, customNight)
+    
+    if today in twoDays :
+        if time == '11:00' :
+            id = sheet1.col_values(1)
+
+            for i in id[1:] :
+                cell = id.index(str(i)) + 1
+                dataUser = sheet1.row_values(cell)
+
+                if len(dataUser) < 5 :
+                    try :
+                        # request data ke user
+                        await bot.send_message(i, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
+                                                \n\nMohon kesediaannya untuk mengisi data-data berikut.\
+                                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+
+                        # memulai state inputData
+                        await bot.set_state(i, States.inputData)
+                    except :
+                        print(f"User {i} blocked me, Sir.\n")
 
 # fungsi untuk memeriksa custom reminder di GSS
 # dan mengirim pesan reminder ke user
-async def reminderMsg(randomMsg, column) :
+async def reminderMsg(randomMsg, customMessage) :
     # kolom id di GSS
     id = sheet3.col_values(1)
-    
+
+    count = 0
     for i in id[1:] :
-        # jika chat ID belum mendapatkan reminder
-        if i not in idDone :
-            cell = id.index(str(i)) + 1
-            dataUser = sheet3.row_values(cell)
+        cell = id.index(str(i))
 
-            # memeriksa custom reminder user
-            if dataUser[column] != '-' :
-                randomMsg = dataUser[column]
+        # memeriksa custom reminder user
+        text = randomMsg
+        if customMessage[cell] != '-' :
+            text = customMessage[cell]
 
-            try :
-                await bot.send_message(i, randomMsg)
+        try :
+            await bot.send_message(i, text)
+            count += 1
 
-            except :
-                print(f"User {i} blocked me, Sir.\n")
-
-            # menambahkan chat ID ke list idDone
-            idDone.append(i)
+        except :
+            print(f"User {i} blocked me, Sir.\n")
     
+    print(f'Messages successfuly sent to {count} from {len(id[1:])} users, Sir.')
+
+bot.add_custom_filter(asyncio_filters.StateFilter(bot))
+
 async def main() :
     while True :
         # memeriksa hari
@@ -612,11 +642,14 @@ async def main() :
         # memeriksa waktu saat ini
         currentTime = time.strftime('%H:%M')
 
-        # memanggil fungsi reminder
         await reminder(today, currentTime)
 
         second = time.strftime('%S')
         second = int(second)
+        minute = time.strftime('%M')
+        minute = int(minute)*60
+
+        seconds = second + minute
 
         clock = time.strftime('%H:%M:%S')
         print('*', clock, '*')
@@ -624,13 +657,15 @@ async def main() :
         print()
 
         # waktu tunggu loop
-        await asyncio.sleep(60 - second)
+        await asyncio.sleep(3600 - seconds)
 
 # run using asynchronous mode
-try :
-    loop = asyncio.new_event_loop()
-    loop.create_task(main(), name='Time Checking')
-    loop.create_task(bot.polling(), name='Bot Commands')
-    loop.run_forever()
-except :
-    pass
+while True :
+    try :
+        loop = asyncio.new_event_loop()
+        loop.create_task(main(), name='Time Checking')
+        loop.create_task(bot.infinity_polling(), name='Bot Commands')
+        loop.run_forever()
+    except :
+        time.sleep(5)
+        continue
