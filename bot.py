@@ -35,9 +35,9 @@ async def start(message) :
 
     try :
         await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
-                            \n\nBot ini akan mengingatkanmu untuk absensi pada jam 8 pagi, 5 sore, dan 8 malam.\
-                            \nTekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.\
-                            \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
+                                \n\nBot ini akan mengingatkanmu untuk absensi pada jam 8 pagi, 5 sore, dan 8 malam.\
+                                \nTekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.\
+                                \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
         print(f'user {chatID} started me, Sir.')
         
         # kolom id di GSS
@@ -73,10 +73,10 @@ async def start(message) :
             if len(dataUser) < 5 :
                 # request data ke user
                 await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
-                                    \n\nMohon kesediaannya untuk mengisi data-data berikut.\
-                                    \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
-                                    \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                                    \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+                                        \n\nMohon kesediaannya untuk mengisi data-data berikut.\
+                                        \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                                        \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                        \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
 
                 # memulai state inputData
                 await bot.set_state(chatID, States.inputData)
@@ -209,7 +209,7 @@ async def customReminder(message) :
 
     chatID = message.chat.id
 
-    await bot.send_message(chatID, 'Pilih salah satu dari jadwal jam absensi di bawah ini.', reply_markup = await options())
+    await bot.send_message(chatID, 'Pilih salah satu dari jadwal jam absensi di bawah ini.', reply_markup=await options())
 
 # state customMsg
 @bot.message_handler(state=States.customMsg)
@@ -255,7 +255,7 @@ async def addReminder(message) :
     chatID = message.chat.id
 
     if chatID in admin :
-        await bot.send_message(chatID, 'Pilih salah satu dari jadwal reminder di bawah ini.', reply_markup = await choices())
+        await bot.send_message(chatID, 'Pilih salah satu dari jadwal reminder di bawah ini.', reply_markup=await choices())
 
 # state addMsg
 @bot.message_handler(state=States.addMsg)
@@ -294,7 +294,7 @@ async def broadcast(message) :
     chatID = message.chat.id
 
     if chatID in admin :
-        await bot.send_message(chatID, 'Silakan pilih tujuan pesan broadcast di bawah ini.', reply_markup = await selections())
+        await bot.send_message(chatID, 'Silakan pilih tujuan pesan broadcast di bawah ini.', reply_markup=await selections())
 
 # state someUser
 @bot.message_handler(state=States.someUser)
@@ -313,6 +313,7 @@ async def someUser(message) :
     # mengambil chat ID user menggunakan NIK
     users = []
     failedUsers = []
+    
     for i in data['someUser'] :
         try :
             cell = nik.index(i) + 1
@@ -588,7 +589,6 @@ async def reminder(today, time) :
     if today in twoDays :
         if time == '11:00' :
             id = sheet1.col_values(1)
-
             usernames  = sheet1.col_values(2)
             names = sheet1.col_values(3)
 
