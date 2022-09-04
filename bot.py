@@ -589,11 +589,14 @@ async def reminder(today, time) :
         if time == '11:00' :
             id = sheet1.col_values(1)
 
-            for i in id[1:] :
-                cell = id.index(str(i)) + 1
-                dataUser = sheet1.row_values(cell)
+            usernames  = sheet1.col_values(2)
+            names = sheet1.col_values(3)
 
-                if len(dataUser) < 5 :
+            for i in id[1:] :
+                cell = id.index(str(i))
+                data = [usernames[cell], names[cell]]
+
+                if '' in data :
                     try :
                         # request data ke user
                         await bot.send_message(i, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
