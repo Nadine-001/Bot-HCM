@@ -2,3 +2,4 @@ pyTelegramBotAPI==4.6.1
 aiohttp==3.8.1
 async_generator
 gspread==5.4.0
+fpdf2==2.5.7
