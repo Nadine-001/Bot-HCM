@@ -3,10 +3,12 @@ from telebot import asyncio_filters
 from telebot.asyncio_storage import StateMemoryStorage
 from telebot.asyncio_handler_backends import State, StatesGroup
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from datetime import date
+from datetime import date, datetime
 import time, asyncio, gspread, random
+from fpdf import FPDF
 
-bot = AsyncTeleBot('5088370919:AAHa6lHh_S8jR--KGU2Y3u-D3jNV3KktfNU', state_storage=StateMemoryStorage())
+token = '5088370919:AAHa6lHh_S8jR--KGU2Y3u-D3jNV3KktfNU'
+bot = AsyncTeleBot(token, state_storage=StateMemoryStorage())
 
 # custom states
 class States(StatesGroup):
@@ -14,8 +16,11 @@ class States(StatesGroup):
     customMsg = State()
     addMsg = State()
     bcMsg = State()
+    specialBroadcast = State()
     someUser = State()
-    weekendReminder = State()
+    nameUser = State()
+    emailUser = State()
+    baAbsen = State()
 
 # link ke GSS
 gs = gspread.service_account(filename='presensi-reminder.json')
@@ -35,61 +40,93 @@ async def start(message) :
     user = '@' + message.from_user.username
 
     try :
-        await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
-                            \n\nBot ini akan mengingatkanmu untuk absensi pada jam 8 pagi, 5 sore, dan 8 malam.\
-                            \nTekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.\
-                            \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
-        print(f'user {chatID} started me, Sir.')
-        
         # kolom id di GSS
         id = sheet1.col_values(1)
 
         # jika user adalah user baru
         if str(chatID) not in id :
+            try :
+                await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
+                                            \n\nBot ini akan mengingatkanmu untuk absensi pada jam 8 pagi, 5 sore, dan 8 malam.\
+                                            \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
+
+                print(f'New user ({chatID}) started me, Sir.')
+
+            except :
+                print(f"I can't reply to a new user ({chatID}), Sir.")
+
             # menambahkan chat ID dan username ke GSS
             row = len(id) + 1
             sheet1.update_cell(row, 1, chatID)
             sheet1.update_cell(row, 2, user)
             sheet3.update_cell(row, 1, chatID)
-            for i in range(2, 5) :
+            for i in range(2, 6) :
                 sheet3.update_cell(row, i, '-')
-            
-            # memulai state inputData
-            await bot.set_state(chatID, States.inputData)
-            
-            # request data ke user
-            await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu adalah pengguna baru.\
-                                \n\nMohon kesediaannya untuk mengisi data-data berikut.\
-                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
-                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+
+            try :
+                # request data ke user
+                await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu adalah pengguna baru.\
+                                                \n\nMohon kesediaannya untuk mengisi data-data berikut.\
+                                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+                
+                # memulai state inputData
+                await bot.set_state(chatID, States.inputData)
+                
+            except :
+                print(f"I'm not able to ask data to a new user ({chatID}), Sir.")
         
         # jika user bukan user baru
         else :
+            print(f'A user ({chatID}) greetings to me, Sir.')
+
             # meng-update username di GSS
             cell = id.index(str(chatID)) + 1
             sheet1.update_cell(cell, 2, user)
 
             dataUser = sheet1.row_values(cell)
             if len(dataUser) < 5 :
-                # request data ke user
-                await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
-                                    \n\nMohon kesediaannya untuk mengisi data-data berikut.\
-                                    \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
-                                    \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                                    \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+                try :
+                    # request data ke user
+                    await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
+                                                    \n\nMohon kesediaannya untuk mengisi data-data berikut.\
+                                                    \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                                                    \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                                    \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
 
-                # memulai state inputData
-                await bot.set_state(chatID, States.inputData)
+                    # memulai state inputData
+                    await bot.set_state(chatID, States.inputData)
+
+                except :
+                    print(f"I'm not able to ask data to the user ({chatID}), Sir.")
+                    
+            else :
+                await help(message)
 
     except :
-        print("Something's wrong, Sir.")
+        print("Something went wrong, Sir.")
 
-@bot.message_handler(state='*', commands='cancel')
+@bot.message_handler(state='*', commands=['cancel'])
 async def cancel(message):
     chatID = message.chat.id
 
-    await bot.delete_state(chatID)
+    state = await bot.get_state(chatID)
+
+    if state != None :
+        try :
+            await bot.delete_state(chatID)
+            await bot.send_message(chatID, 'Berhasil membatalkan proses ✔️\nApa yang ingin kamu lakukan selanjutnya?\
+                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')                    
+        except :
+            print(f"I can't delete the state of user ({chatID}), Sir.")
+                
+    else :
+        try :
+            await bot.send_message(chatID, 'Tidak ada proses yang perlu dibatalkan.\
+                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
 
 # state inputData
 @bot.message_handler(state=States.inputData)
@@ -120,19 +157,30 @@ async def inputData(message) :
             sheet1.update_cell(cell, 4, "'" + nik)
             sheet1.update_cell(cell, 5, "'" + nomorHp)
 
-            await bot.reply_to(message, f'Data berhasil ditambahkan ✅')
+            try :
+                await bot.reply_to(message, f'Data berhasil ditambahkan ✅\
+                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')
 
-            # mengakhiri state inputData
-            await bot.delete_state(chatID)
+                # mengakhiri state inputData
+                await bot.delete_state(chatID)
+
+            except :
+                print(f"I can't reply to the user ({chatID}), Sir.")
 
         # jika input user tidak sesuai format
-        else : 
-            await bot.reply_to(message, '❌ Teliti kembali data ini. Pastikan sudah sesuai format.\
-                               \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+        else :
+            try :
+                await bot.reply_to(message, '❌ Teliti kembali data ini. Pastikan sudah sesuai format.\
+                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+            except :
+                print(f"I can't reply to the user ({chatID}), Sir.")
 
     # jika input user kurang atau lebih dari 3 data
     else :
-        await bot.reply_to(message, '❌ Pastikan pesan ini terdiri dari 3 baris data.')
+        try :
+            await bot.reply_to(message, '❌ Pastikan pesan ini terdiri dari 3 baris data.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
 
 @bot.message_handler(commands=['cekdata'])
 async def cekData(message) :
@@ -154,17 +202,24 @@ async def cekData(message) :
             for i in range(2, 5) :
                 dataUser[i] = '-'
 
-        # mengirim data user
-        await bot.send_message(chatID, f'— Data Pengguna —\
-                                        \n\nUsername: {dataUser[1]}\
-                                        \n\nNama: {dataUser[2]}\
-                                        \n\nNomor Induk Karyawan: {dataUser[3]}\
-                                        \n\nNomor Hp: {dataUser[4]}')
-        await bot.send_message(chatID, '⚠️ Tekan /updateData untuk melengkapi data atau jika data tidak sesuai.')
+        try :
+            # mengirim data user
+            await bot.send_message(chatID, f'— Data Pengguna —\
+                                            \n\nUsername: {dataUser[1]}\
+                                            \n\nNama: {dataUser[2]}\
+                                            \n\nNomor Induk Karyawan: {dataUser[3]}\
+                                            \n\nNomor Hp: {dataUser[4]}')
+            await bot.send_message(chatID, '⚠️ Tekan /updatedata untuk melengkapi data atau jika data tidak sesuai.')
+            
+        except :
+            print(f"I can't send data of the user ({chatID}), Sir.")
     
     # jika chat ID tidak ada di data GSS
     else :
-        await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        try :
+            await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
 
 # tombol 'Sudah' dan 'Belum'
 async def answers() :
@@ -189,11 +244,17 @@ async def updateData(message) :
         cell = id.index(str(chatID)) + 1
         sheet1.update_cell(cell, 2, user)
 
-        await bot.send_message(chatID, 'Apakah kamu sudah melakukan pengecekan data?', reply_markup=await answers())
+        try :
+            await bot.send_message(chatID, 'Apakah kamu sudah melakukan pengecekan data?', reply_markup=await answers())
+        except :
+            print(f"I'm not able to ask the user ({chatID}), Sir.")
 
     # jika chat ID tidak ada di data GSS
     else :
-        await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        try :
+            await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
 
 # pilihan '8 Pagi', '5 Sore', dan '8 Malam'
 async def options() :
@@ -210,7 +271,10 @@ async def customReminder(message) :
 
     chatID = message.chat.id
 
-    await bot.send_message(chatID, 'Pilih salah satu dari jadwal jam absensi di bawah ini.', reply_markup = await options())
+    try :
+        await bot.send_message(chatID, 'Pilih salah satu dari jadwal jam absensi di bawah ini.', reply_markup=await options())
+    except :
+        print(f"I'm not able to ask the user ({chatID}), Sir.")
 
 # state customMsg
 @bot.message_handler(state=States.customMsg)
@@ -228,17 +292,21 @@ async def customMsg(message) :
         cell = id.index(str(chatID)) + 1
         sheet3.update_cell(cell, column, data['customMsg'])
 
-        await bot.send_message(chatID, 'Custom reminder berhasil diterapkan ✅')
-
-        # mengakhiri state customMsg
-        await bot.delete_state(chatID)
+        try :
+            await bot.send_message(chatID, 'Custom reminder berhasil diterapkan ✅\
+                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
     
     # jika chat ID tidak ada di data GSS
     else :
-        await bot.send_message(chatID, '🚫 User tidak ditemukan. Tekan /start.')
+        try :
+            await bot.send_message(chatID, '🚫 User tidak ditemukan. Tekan /start.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
 
-        # mengakhiri state customMsg
-        await bot.delete_state(chatID)
+    # mengakhiri state customMsg
+    await bot.delete_state(chatID)
 
 # pilihan 'Aktifkan' dan 'Nonaktifkan'
 async def weekend() :
@@ -249,14 +317,17 @@ async def weekend() :
     return markup
 
 @bot.message_handler(commands=['weekendreminder'])
-async def customReminder(message) :
+async def weekendReminder(message) :
     global chatID
 
     chatID = message.chat.id
 
-    await bot.send_message(chatID, 'Kamu ingin mengaktifkan atau menonaktifkan weekend reminder?', reply_markup=await weekend())
+    try :
+        await bot.send_message(chatID, 'Kamu ingin mengaktifkan atau menonaktifkan reminder untuk akhir pekan?', reply_markup=await weekend())
+    except :
+        print(f"I'm not able to ask the user ({chatID}), Sir.")
 
-# pilihan 'Kurang 5 Menit', '8 Pagi', '5 Sore', dan '8 Malam'
+# pilihan '8 Pagi', '5 Sore', dan '8 Malam'
 async def choices() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 3
@@ -272,7 +343,10 @@ async def addReminder(message) :
     chatID = message.chat.id
 
     if chatID in admin :
-        await bot.send_message(chatID, 'Pilih salah satu dari jadwal reminder di bawah ini.', reply_markup = await choices())
+        try :
+            await bot.send_message(chatID, 'Pilih salah satu dari jadwal reminder di bawah ini.', reply_markup=await choices())
+        except :
+            print(f"I'm not able to ask the admin ({chatID}), Sir.")
 
 # state addMsg
 @bot.message_handler(state=States.addMsg)
@@ -289,7 +363,8 @@ async def addMsg(message) :
         row = len(template) + 1
         sheet2.update_cell(row, column, data['addMsg'])
 
-        await bot.send_message(chatID, 'Pesan reminder berhasil ditambahkan ✅')
+        await bot.send_message(chatID, 'Pesan reminder berhasil ditambahkan ✅\
+                                        \n\nTekan /help untuk mengetahui daftar command bot ini.')
     except :
         await bot.send_message(chatID, '❌ Pesan reminder gagal ditambahkan.')
     
@@ -301,7 +376,8 @@ async def selections() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
     markup.add(InlineKeyboardButton('User Tertentu', callback_data='some'),
-               InlineKeyboardButton('Semua User', callback_data='all'))
+               InlineKeyboardButton('Semua User', callback_data='all'),
+               InlineKeyboardButton('Spesial Broadcast', callback_data='spc'))
     return markup
 
 @bot.message_handler(commands=['broadcast'])
@@ -311,7 +387,145 @@ async def broadcast(message) :
     chatID = message.chat.id
 
     if chatID in admin :
-        await bot.send_message(chatID, 'Silakan pilih tujuan pesan broadcast di bawah ini.', reply_markup = await selections())
+        try :
+            await bot.send_message(chatID, 'Silakan pilih tujuan pesan broadcast di bawah ini.', reply_markup=await selections())
+        except :
+            print(f"I'm not able to ask the admin ({chatID}), Sir.")
+
+# state specialBroadcast
+@bot.message_handler(state=States.specialBroadcast)
+async def specialBroadcast(message) :
+    global users, niks, failed, data1, failedUsers
+
+    chatID = message.chat.id
+
+    # kolom nik di GSS
+    nik = sheet1.col_values(4)
+    
+    # mengambil input dari admin
+    async with bot.retrieve_data(chatID) as data :
+        data['specialBroadcast'] = message.text.split('\n')
+    
+    data1 = data['specialBroadcast']
+
+    # mengambil chat ID user menggunakan NIK
+    users = []
+    failedUsers = []
+    niks = []
+    failed = []
+
+    for i in data['specialBroadcast'] :
+        try :
+            cell = nik.index(i) + 1
+            dataUser = sheet1.row_values(cell)
+            users.append(dataUser[0])
+            niks.append(i)
+        except :
+            failedUsers.append(i)
+            cell = data['specialBroadcast'].index(i)
+            failed.append(cell)
+    
+    try :
+        await bot.send_message(chatID, 'Silakan kirim nama user yang akan mendapatkan pesan.\
+                                        \nNama user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                        \n\nContoh:\nVanessa Sisilia\nArina Hasanah\nSiti Nurkhamidah')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+        
+        # memulai state nameUser
+        await bot.set_state(chatID, States.nameUser)
+
+    except :
+        print(f"I'm not able to ask the admin ({chatID}), Sir.")
+
+# state nameUser
+@bot.message_handler(state=States.nameUser)
+async def nameUser(message) :
+    global names, failedNames
+    
+    chatID = message.chat.id
+    
+    # mengambil input dari admin
+    async with bot.retrieve_data(chatID) as data :
+        data['nameUser'] = message.text.split('\n')
+    
+    data2 = data['nameUser']
+
+    if len(data1) == len(data2) :
+        names = []
+        failedNames = []
+        blocker = []
+
+        for i in data['nameUser'] :
+            cell = data['nameUser'].index(i)
+
+            if cell in failed :
+                failedNames.append(i)
+                continue
+
+            names.append(i)
+
+        print(len(users))
+
+        count = 0
+        for i in range(0, len(users)) :
+            msg = f'‼️ INFO E-LEARNING ‼️\
+                    \n\nSemangat Pagi !!!\
+                    \nKepada sdr. {names[i]} / NIK. {niks[i]}\
+                    \ndimohon untuk mengerjakan E-Learning Risk Management dengan jadwal sebagai berikut :\
+                    \n\nTanggal Pelaksanaan : 19-23 September 2022\
+                    \nCara Akses : Portal TA —> IFATA —> E-Learning —> Risk Management\
+                    \nUser/Pass : SSO\
+                    \n\nDikarenakan E-Learning ini bersifat WAJIB, maka harap mengerjakannya dengan semaksimal mungkin.\
+                    \n\nJika terdapat kendala, dapat menghubungi PIC yang bertugas : Faizhal (0813-9021-4565)\
+                    \n\n_(Bagi yang sudah mengerjakan harap abaikan pesan ini)_\
+                    \nTerimakasih'
+
+            try :
+                count += 1
+                await bot.send_message(users[i], msg, 'Markdown')
+            except :
+                blocker.append(users[i])
+
+            print(users[i], niks[i], names[i])
+
+        if count == 0 :
+            try :
+                await bot.send_message(chatID, '❌ Pesan tidak berhasil disiarkan.')
+            except :
+                print(f"I'm not able to message the admin ({chatID}), Sir.")
+
+        else :
+            if bool(failedUsers) :
+                try :
+                    await bot.send_message(chatID, f'Pengguna dengan NIK : {failedUsers} dan Nama : {failedNames} tidak ditemukan ‼️')
+                except :
+                    print(f"I'm not able to message the admin ({chatID}), Sir.")
+            
+            if bool(blocker) :
+                try :
+                    await bot.send_message(chatID, f'Pengguna dengan chat ID : {blocker} memblokir bot ini ‼️')
+                except :
+                    print(f"I'm not able to message the admin ({chatID}), Sir.")
+                    
+            try :
+                await bot.send_message(chatID, f'Pesan berhasil disiarkan ke {count} pengguna ✅\
+                                        \n\nApa yang ingin kamu lakukan selanjutnya?\
+                                        \nTekan /help untuk mengetahui daftar command bot ini.')
+
+            except :
+                print(f"I'm not able to message the admin ({chatID}), Sir.")
+        
+        await bot.delete_state(chatID)
+
+    else :
+        try :
+            await bot.send_message(chatID, '❌ Pastikan data NIK dan data Nama memiliki jumlah yang sama.')
+            
+            # memulai state nameUser
+            await bot.set_state(chatID, States.nameUser)
+
+        except :
+            print(f"I'm not able to message the admin ({chatID}), Sir.")
 
 # state someUser
 @bot.message_handler(state=States.someUser)
@@ -330,6 +544,7 @@ async def someUser(message) :
     # mengambil chat ID user menggunakan NIK
     users = []
     failedUsers = []
+
     for i in data['someUser'] :
         try :
             cell = nik.index(i) + 1
@@ -340,11 +555,15 @@ async def someUser(message) :
     
     target = 'someUser'
 
-    await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan.')
-    await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-    
-    # memulai state bcMsg
-    await bot.set_state(chatID, States.bcMsg)
+    try :
+        await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan.')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+        
+        # memulai state bcMsg
+        await bot.set_state(chatID, States.bcMsg)
+
+    except :
+        print(f"I'm not able to ask the admin ({chatID}), Sir.")
 
 # state bcMsg
 @bot.message_handler(state=States.bcMsg, content_types=['text', 'photo', 'document', 'video'])
@@ -368,41 +587,67 @@ async def bcMsg(message) :
         elif type == 'video' :
             data['broadcast'] = message.video.file_id
     
-    try :
-        # jika broadcast akan disiarkan ke user tertertu
-        if target == 'someUser' :
-            # memanggil fungsi send
-            await send(users, data['broadcast'], message.caption)
+    # jika broadcast akan disiarkan ke user tertertu
+    if target == 'someUser' :
+        # memanggil fungsi send
+        await send(users, data['broadcast'], message.caption)
 
-            await bot.send_message(chatID, f'Pesan berhasil disiarkan ke {len(users)} pengguna ✅')
+        try :
+            await bot.send_message(chatID, f'Pesan berhasil disiarkan ke {count} pengguna ✅\
+                                            \n\nApa yang ingin kamu lakukan selanjutnya?\
+                                            \nTekan /help untuk mengetahui daftar command bot ini.')
 
-            if len(failedUsers) != 0 :
+        except :
+            print(f"I can't send message to the admin ({chatID}), Sir.")
+
+        if len(failedUsers) != 0 :
+            try :
                 await bot.send_message(chatID, f'Pengguna dengan NIK : {failedUsers} tidak ditemukan ‼️')
+            except :
+                print(f"I can't send message to the admin ({chatID}), Sir.")
 
-        # jika broadcast akan disiarkan ke semua user
-        else :
-            # memanggil fungsi send
-            await send(id[1:], data['broadcast'], message.caption)
-        
-            await bot.send_message(chatID, 'Pesan berhasil disiarkan ✅')
-    except :
-        await bot.send_message(chatID, '❌ Pesan gagal disiarkan.')
+    # jika broadcast akan disiarkan ke semua user
+    else :
+        # memanggil fungsi send
+        await send(id[1:], data['broadcast'], message.caption)
+    
+        try :
+            await bot.send_message(chatID, f'Pesan berhasil disiarkan ke {count} pengguna ✅\
+                                        \n\nApa yang ingin kamu lakukan selanjutnya?\
+                                        \nTekan /help untuk mengetahui daftar command bot ini.')
+        except :
+            print(f"I can't send message to the admin ({chatID}), Sir.")
 
     # mengakhiri state bcMsg
     await bot.delete_state(chatID)
 
 # fungsi untuk mengirim broadcast ke user
 async def send(targets, msg, capt) :
+    global count
+
+    blocker = []
+    count = 0
+
     # mengirim pesan broadcast ke user
     for i in targets :
-        if type == 'text' :
-            await bot.send_message(i, msg)
-        elif type == 'photo' :
-            await bot.send_photo(i, msg, capt)
-        elif type == 'document' :
-            await bot.send_document(i, msg, caption=capt)
-        elif type == 'video' :
-            await bot.send_video(i, msg, caption=capt)
+        count += 1
+        try :
+            if type == 'text' :
+                await bot.send_message(i, msg)
+            elif type == 'photo' :
+                await bot.send_photo(i, msg, capt)
+            elif type == 'document' :
+                await bot.send_document(i, msg, caption=capt)
+            elif type == 'video' :
+                await bot.send_video(i, msg, caption=capt)
+        except :
+            blocker.append(i)
+    
+    if bool(blocker) :
+        try :
+            await bot.send_message(chatID, f'User : {blocker} memblokir bot ini.')
+        except :
+            print(f"I can't send message to the admin ({chatID}), Sir.")
 
 # mengambil input dari tombol yang diklik user
 @bot.callback_query_handler(func=lambda call: True)
@@ -422,7 +667,7 @@ async def callback_query(call) :
     
     # jika user menjawab 'Belum'
     elif call.data == 'blm' :
-        await bot.send_message(chatID, '⚠️ Lakukan /cekData terlebih dahulu.')
+        await bot.send_message(chatID, '⚠️ Lakukan /cekdata terlebih dahulu.')
 
     # -- BAGIAN CUSTOM REMINDER --
     elif call.data in ['morning', 'afternoon', 'night'] :
@@ -485,6 +730,15 @@ async def callback_query(call) :
         # memulai state bcMsg
         await bot.set_state(chatID, States.bcMsg)
     
+    elif call.data == 'spc' :
+        await bot.send_message(chatID, 'Silakan kirim NIK user yang akan mendapatkan pesan.\
+                               \nNIK user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                               \n\nContoh:\n444567\n87765432\n98765432')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+        
+        # memulai state someUser
+        await bot.set_state(chatID, States.specialBroadcast)
+    
     # -- BAGIAN WEEKEND REMINDER --
     # jika user ingin mengaktifkan weekend reminder
     elif call.data in ['on', 'off'] :
@@ -493,12 +747,143 @@ async def callback_query(call) :
 
         if call.data == 'on' :
             sheet3.update_cell(cell, 5, call.data)
-            await bot.send_message(chatID, 'Berhasil mengaktifkan weekend reminder ✅')
+            await bot.send_message(chatID, 'Berhasil mengaktifkan reminder untuk akhir pekan ✅\
+                                            \nApa yang ingin kamu lakukan selanjutnya?\
+                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')
 
         # jika user ingin menonaktifkan weekend reminder
         elif call.data == 'off' :
             sheet3.update_cell(cell, 5, '-')
-            await bot.send_message(chatID, 'Berhasil menonaktifkan weekend reminder ✅')
+            await bot.send_message(chatID, 'Berhasil menonaktifkan reminder untuk akhir pekan ✅\
+                                            \nApa yang ingin kamu lakukan selanjutnya?\
+                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')
+
+@bot.message_handler(commands=['baabsen'])
+async def BAabsen(message) :
+    chatID = message.chat.id
+    
+    try :
+        await bot.send_message(chatID, 'Silakan isi data-data berikut.\
+                                        \nJabatan :\nLokasi Kerja:\nTanggal Absen:\
+                                        \nJabatan Atasan:\nNama Atasan:\nNIK Atasan:\
+                                        \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                        \n\nContoh:\nDeveloper\nTelkom Akses Singotoro\n27 September 2022\nMgr\nFaizhal Rifky Alfaris\n934567')
+        
+        await bot.set_state(chatID, States.baAbsen)
+
+    except :
+        print(f"I can't ask the user ({chatID}), Sir.")
+
+# state baAbsen
+@bot.message_handler(state=States.baAbsen)
+async def baAbsen(message) :
+    chatID = message.chat.id
+
+    id = sheet1.col_values(1)
+    nama = sheet1.col_values(3)
+    nik = sheet1.col_values(4)
+
+    cell = id.index(str(chatID))
+    nama_pegawai = nama[cell]
+    nik_pegawai = nik[cell]
+
+    # mengambil input dari user
+    async with bot.retrieve_data(chatID) as data :
+        data['baAbsen'] = message.text.split('\n')
+    
+    # input user harus sebanyak 6 data
+    if len(data['baAbsen']) == 6 :
+        jabatan_pegawai = data['baAbsen'][0]
+        lokasi_kerja = data['baAbsen'][1]
+        tanggal_absen = data['baAbsen'][2]
+        jabatan_atasan = data['baAbsen'][3]
+        nama_atasan = data['baAbsen'][4]
+        nik_atasan = data['baAbsen'][5]
+
+        pegawai = [nama_pegawai, nik_pegawai, jabatan_pegawai, lokasi_kerja, tanggal_absen]
+        atasan = [jabatan_atasan, nama_atasan, nik_atasan]
+
+        identity = ['Nama', 'NIK', 'Jabatan', 'Lokasi Kerja', 'Tanggal Absen']
+
+        reason = ['a. Telat input tiket',
+                'b. Telat approve tiket oleh atasan',
+                'c. Langsung ke tempat dinas/bekerja (non SPPD)',
+                'd. Sudah absen, tapi tidak tercatat di SUPERHANA', 
+                'e. Dll, sebutkan ...........................................................']
+
+        documents = ['1. Penyesuaian data absensi',
+                    '2. Proses pembayaran payroll',
+                    '3. Pengajuan usulan karier',
+                    '4. Proses perpanjangan kontrak']
+
+        tanggal = datetime.now()
+        month = datetime.strptime(str(tanggal.month), "%m").strftime("%B")
+
+        def iter(r, ls) :
+            for i in range(0, r) :
+                pdf.cell(0, 7, f'                 {ls[i]}', ln=1, markdown=True)
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_margins(20, 20, 20)
+        pdf.set_font('Times', 'B', 12)
+        pdf.cell(200, 12, 'SURAT PERNYATAAN', ln=1, align='C')
+        pdf.set_font('Times', size=12)
+        pdf.ln(2)
+        pdf.cell(0, 10, 'Yang bertanda tangan di bawah ini menyatakan benar ada absen kosong pada :', ln=1)
+        pdf.ln(1)
+        for i in range(0, 5) :
+            pdf.cell(50, 7, f'                {identity[i]}')
+            pdf.cell(5, 7, ':')
+            pdf.cell(0, 7, f'{pegawai[i]}', ln=1)
+        pdf.ln(2)
+        pdf.cell(0, 10, 'Dengan alasan (pilih salah satu) :', ln=1)
+        pdf.ln(2)
+        iter(5, reason)
+        pdf.ln(2.5)
+        pdf.multi_cell(0, 7, 'Untuk selanjutnya bersedia menerima sanksi administrasi sesuai dengan peraturan perusahaan yang berlaku terkait absensi karyawan Telkom Akses.')
+        pdf.ln(2)
+        pdf.cell(0, 10, 'Surat pernyataan ini dibuat sebagai dokumen pendukung salah satu atau beberapa proses berikut :', ln=1)
+        pdf.ln(2)
+        iter(4, documents)
+        pdf.ln(2)
+        pdf.multi_cell(0, 7, 'Demikian surat pernyataan ini dibuat dengan sesungguhnya dan untuk dipergunakan sebagaimana mestinya.')
+        pdf.ln(7)
+        pdf.cell(0, 10, f'Semarang, {tanggal.day} {month} {tanggal.year}', ln=1, align='R')
+        pdf.ln(7)
+        pdf.set_font('Times', 'B', 12)
+        pdf.cell(72, 7, 'Mengetahui,', align='C')
+        pdf.cell(20, 7)
+        pdf.cell(72, 7, 'Yang Membuat,', ln=1, align='C')
+        pdf.cell(72, 7, f'{atasan[0]}', align='C')
+        pdf.cell(20, 7)
+        pdf.cell(72, 7, f'{pegawai[2]}', ln=1, align='C')
+        pdf.ln(30)
+        pdf.cell(72, 7, f'{atasan[1]}', align='C')
+        pdf.cell(20, 7)
+        pdf.cell(72, 7, f'{pegawai[0]}', ln=1, align='C')
+        pdf.cell(72, 7, f'NIK. {atasan[2]}', align='C')
+        pdf.cell(20, 7)
+        pdf.cell(72, 7, f'NIK. {pegawai[1]}', ln=1, align='C')
+        pdf.output(f'{pegawai[0]}.pdf')
+
+        file = open(f'BA Absen_{pegawai[0]}.pdf', 'rb')
+
+        try :
+            await bot.send_document(chatID, file, caption='Silakan periksa kembali data pada file ini.\
+                                                            \nJika terjadi ketidaksesuaian pada nama dan NIK pegawai, silakan lakukan /updatedata')
+
+        except :
+            print(f"I can't send the document to the user ({chatID}), Sir.")
+        
+        await bot.delete_state(chatID)
+        
+    # jika input user kurang atau lebih dari 6 data
+    else :
+        try :
+            await bot.reply_to(message, '❌ Pastikan pesan ini terdiri dari 6 baris data.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
 
 @bot.message_handler(commands=['cekcustom'])
 async def cekCustom(message) :
@@ -513,23 +898,30 @@ async def cekCustom(message) :
         cell = id.index(str(chatID)) + 1
         dataUser = sheet3.row_values(cell)
 
-        # mengirim custom reminder user
-        await bot.send_message(chatID, f'— Custom Reminder —\
-                                        \n\n8 Pagi : \n{dataUser[1]}\
-                                        \n\n5 Sore : \n{dataUser[2]}\
-                                        \n\n8 Malam : \n{dataUser[3]}')
+        try :
+            # mengirim daftar custom reminder user
+            await bot.send_message(chatID, f'— Custom Reminder —\
+                                            \n\n8 Pagi : \n{dataUser[1]}\
+                                            \n\n5 Sore : \n{dataUser[2]}\
+                                            \n\n8 Malam : \n{dataUser[3]}')
 
-        # jika user belum atau tidak membuat custom reminder
-        if (dataUser[1] == '-') and (dataUser[2] == '-') and (dataUser[3] == '-') :
-            await bot.send_message(chatID, '⚠️ Tekan /customReminder untuk membuat custom reminder.')
-        
-        # jika user sudah atau memiliki custom reminder
-        else :
-            await bot.send_message(chatID, '⚠️ Tekan /reset untuk menghapus semua custom remindermu.')
+            # jika user belum atau tidak membuat custom reminder
+            if (dataUser[1] == '-') and (dataUser[2] == '-') and (dataUser[3] == '-') :
+                await bot.send_message(chatID, '⚠️ Tekan /customreminder untuk membuat custom reminder.')
+            
+            # jika user sudah atau memiliki custom reminder
+            else :
+                await bot.send_message(chatID, '⚠️ Tekan /reset untuk menghapus semua custom reminder.')
+                
+        except :
+            print(f"I can't send data of the user ({chatID}), Sir.")
     
     # jika chat ID tidak ada di data GSS
     else :
-        await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        try :
+            await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        except :
+            print(f"I can't reply to the user ({chatID}), Sir.")
 
 @bot.message_handler(commands=['reset'])
 async def reset(message) :
@@ -545,11 +937,19 @@ async def reset(message) :
         for i in range(2, 5) :
             sheet3.update_cell(cell, i, '-')
         
-        await bot.send_message(chatID, 'Custom reminder berhasil direset ✅')
+        try :
+            await bot.send_message(chatID, 'Custom reminder berhasil direset ✅\
+                                            \n\nApa yang ingin kamu lakukan selanjutnya?\
+                                            \nTekan /help untuk mengetahui daftar command bot ini.')
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
     
     # jika chat ID tidak ada di data GSS
     else :
-        await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        try :
+            await bot.send_message(chatID, '🚫 Data tidak ditemukan. Tekan /start.')
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
 
 @bot.message_handler(commands=['help'])
 async def help(message) :
@@ -561,23 +961,30 @@ async def help(message) :
                \n/updatedata — Memperbarui data pengguna\
                \n/customreminder — Menambahkan custom reminder\
                \n/cekcustom — Mengecek custom reminder\
-               \n/weekendreminder — Mengaktifkan atau menonaktifkan weekend reminder'
+               \n/weekendreminder — Mengaktifkan atau menonaktifkan reminder untuk akhir pekan\
+               \n/baabsen — Membuat surat pernyataan BA Absen'
     
     # jika user adalah admin
     if chatID in admin :
-        await bot.send_message(chatID, f'{command}\
-                               \n/addreminder — Menambahkan pesan reminder (template message)\
-                               \n/broadcast — Menyiarkan pesan')
+        try :
+            await bot.send_message(chatID, f'{command}\
+                                \n/addreminder — Menambahkan pesan reminder (template message)\
+                                \n/broadcast — Menyiarkan pesan')
+        
+        except :
+            print(f"I can't send message to the admin ({chatID}), Sir.")
     
     # jika user bukan admin
     else :
-        await bot.send_message(chatID, command)
+        try :
+            await bot.send_message(chatID, command)
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
 
 # untuk mengatasi pesan user selain yang ada di daftar command
 @bot.message_handler()
 async def anything(message) :
-    chatID = message.chat.id
-    await bot.send_message(chatID, 'Tekan /help untuk mengetahui apa saja yang dapat dilakukan oleh bot ini.')
+    await help(message)
 
 # fungsi untuk mengirim reminder absensi ke user
 async def reminder(today, time) :
@@ -596,24 +1003,24 @@ async def reminder(today, time) :
     if today not in weekend :
         # jika waktu absensi adalah jam 8 pagi
         if time == '08:00' :   
-            await reminderMsg(2)
+            await reminderMsg(2, id)
 
         # jika waktu absensi adalah jam 5 sore
         elif time == '17:00' :
-            await reminderMsg(3)
+            await reminderMsg(3, id)
 
         # jika waktu absensi adalah jam 8 malam
         elif time == '20:00' :
-            await reminderMsg(4)
+            await reminderMsg(4, id)
     else :
         additionReminder = sheet3.col_values(5)
         
         users = []
         for i in id :
             cell = id.index(str(i)) + 1
-            weekendReminder = additionReminder[cell]
+            weekendRemind = additionReminder[cell]
 
-            if weekendReminder != '-' :
+            if weekendRemind != '-' :
                 users.append(i)
         
         if bool(users) :
@@ -635,33 +1042,39 @@ async def reminder(today, time) :
             usernames  = sheet1.col_values(2)
             names = sheet1.col_values(3)
 
+            if len(names) < len(usernames) :
+                for i in range(0, len(usernames) - len(names)) :
+                    names.append('')
+
             for i in id :
                 cell = id.index(str(i)) + 1
                 data = [usernames[cell], names[cell]]
 
+                count = 0
+                blocker = []
+
                 if '' in data :
                     try :
-                        # request data ke user
+                        count += 1
                         await bot.send_message(i, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
-                                                \n\nMohon kesediaannya untuk mengisi data-data berikut.\
-                                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
-                                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+                                                \n\nSilakan tekan /start, kemudian isi data-data yang diperlukan.')
 
-                        # memulai state inputData
-                        await bot.set_state(i, States.inputData)
                     except :
-                        print(f"User {i} blocked me, Sir.\n")
+                        blocker.append(i)
+    
+            if bool(blocker) :
+                print(f"User : {blocker} blocked me, Sir.\n")
 
 # fungsi untuk memeriksa custom reminder di GSS
 # dan mengirim pesan reminder ke user
-async def reminderMsg(col, targets = id) :
+async def reminderMsg(col, targets) :
     # mengambil pesan secara acak dari template message
     templateMsg = sheet2.col_values(col)
     randMsg = random.choice(templateMsg[1:])
 
     customMsg = sheet3.col_values(col)
 
+    blocker = []
     count = 0
     for i in targets :
         cell = id.index(str(i)) + 1
@@ -674,9 +1087,11 @@ async def reminderMsg(col, targets = id) :
         try :
             await bot.send_message(i, text)
             count += 1
-
         except :
-            print(f"User {i} blocked me, Sir.\n")
+            blocker.append(i)
+    
+    if bool(blocker) :
+        print(f"User : {blocker} blocked me, Sir.\n")
     
     print(f'Messages successfuly sent to {count} from {len(id)} users, Sir.')
 
@@ -701,8 +1116,8 @@ async def main() :
         seconds = second + minute
 
         clock = time.strftime('%H:%M:%S')
-        print('*', clock, '*')
-        print('—', today, '—')
+        print(f'* {clock} *')
+        print(f'— {today} —')
         print()
 
         # waktu tunggu loop
