@@ -309,23 +309,23 @@ async def customMsg(message) :
     await bot.delete_state(chatID)
 
 # pilihan 'Aktifkan' dan 'Nonaktifkan'
-async def weekend() :
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 2
-    markup.add(InlineKeyboardButton('Aktifkan', callback_data='on'),
-               InlineKeyboardButton('Nonaktifkan', callback_data='off'))
-    return markup
+# async def weekend() :
+#     markup = InlineKeyboardMarkup()
+#     markup.row_width = 2
+#     markup.add(InlineKeyboardButton('Aktifkan', callback_data='on'),
+#                InlineKeyboardButton('Nonaktifkan', callback_data='off'))
+#     return markup
 
-@bot.message_handler(commands=['weekendreminder'])
-async def weekendReminder(message) :
-    global chatID
+# @bot.message_handler(commands=['weekendreminder'])
+# async def weekendReminder(message) :
+#     global chatID
 
-    chatID = message.chat.id
+#     chatID = message.chat.id
 
-    try :
-        await bot.send_message(chatID, 'Kamu ingin mengaktifkan atau menonaktifkan reminder untuk akhir pekan?', reply_markup=await weekend())
-    except :
-        print(f"I'm not able to ask the user ({chatID}), Sir.")
+#     try :
+#         await bot.send_message(chatID, 'Kamu ingin mengaktifkan atau menonaktifkan reminder untuk akhir pekan?', reply_markup=await weekend())
+#     except :
+#         print(f"I'm not able to ask the user ({chatID}), Sir.")
 
 # pilihan '8 Pagi', '5 Sore', dan '8 Malam'
 async def choices() :
@@ -657,108 +657,135 @@ async def callback_query(call) :
     # -- BAGIAN UPDATE DATA --
     # jika user menjawab 'Sudah'
     if call.data == 'sdh' :
-        await bot.send_message(chatID, 'Silakan isi data-data berikut.\
-                               \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
-                               \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                               \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-        
-        await bot.set_state(chatID, States.inputData)
+        try :
+            await bot.send_message(chatID, 'Silakan isi data-data berikut.\
+                                \nNama Lengkap:\nNomor Induk Karyawan:\nNomor Hp (Telegram):\
+                                \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788')
+            await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+            
+            await bot.set_state(chatID, States.inputData)
+
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
     
     # jika user menjawab 'Belum'
     elif call.data == 'blm' :
-        await bot.send_message(chatID, '⚠️ Lakukan /cekdata terlebih dahulu.')
+        try :
+            await bot.send_message(chatID, '⚠️ Lakukan /cekdata terlebih dahulu.')
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
 
     # -- BAGIAN CUSTOM REMINDER --
     elif call.data in ['morning', 'afternoon', 'night'] :
-        await bot.send_message(chatID, '💬 Silakan kirim custom reminder absensimu.')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+        try :
+            await bot.send_message(chatID, '💬 Silakan kirim custom reminder absensimu.')
+            await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
 
-        # jika user ingin custom reminder absensi pagi
-        if call.data == 'morning' :
-            column = 2
+            # jika user ingin custom reminder absensi pagi
+            if call.data == 'morning' :
+                column = 2
 
-        # jika user ingin custom reminder absensi sore
-        elif call.data == 'afternoon' :
-            column = 3
+            # jika user ingin custom reminder absensi sore
+            elif call.data == 'afternoon' :
+                column = 3
 
-        # jika user ingin custom reminder absensi malam
-        elif call.data == 'night' :
-            column = 4
-        
-        # memulai state customMsg
-        await bot.set_state(chatID, States.customMsg)
+            # jika user ingin custom reminder absensi malam
+            elif call.data == 'night' :
+                column = 4
+            
+            # memulai state customMsg
+            await bot.set_state(chatID, States.customMsg)
+
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
     
     # -- BAGIAN ADD REMINDER (ADMIN ONLY) --
     elif call.data in ['Morning', 'Afternoon', 'Night'] :
-        await bot.send_message(chatID, '💬 Silakan tambahkan pesan reminder absensi untuk semua user.')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-        
-        # jika admin ingin menambahkan reminder absensi pagi
-        if call.data == 'Morning' :
-            column = 2
+        try :
+            await bot.send_message(chatID, '💬 Silakan tambahkan pesan reminder absensi untuk semua user.')
+            await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+            
+            # jika admin ingin menambahkan reminder absensi pagi
+            if call.data == 'Morning' :
+                column = 2
 
-        # jika admin ingin menambahkan reminder absensi sore
-        elif call.data == 'Afternoon' :
-            column = 3
+            # jika admin ingin menambahkan reminder absensi sore
+            elif call.data == 'Afternoon' :
+                column = 3
 
-        # jika admin ingin menambahkan reminder absensi malam
-        elif call.data == 'Night' :
-            column = 4
-        
-        # memulai state addMsg
-        await bot.set_state(chatID, States.addMsg)
+            # jika admin ingin menambahkan reminder absensi malam
+            elif call.data == 'Night' :
+                column = 4
+            
+            # memulai state addMsg
+            await bot.set_state(chatID, States.addMsg)
+            
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
     
     # -- BAGIAN BROADCAST (ADMIN ONLY) --
     # jika admin ingin mengirim pesan broadcast ke user tertentu
     elif call.data == 'some' :
-        await bot.send_message(chatID, 'Silakan kirim NIK user yang akan mendapatkan pesan.\
-                               \nNIK user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                               \n\nContoh:\n444567\n87765432\n98765432')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-        
-        # memulai state someUser
-        await bot.set_state(chatID, States.someUser)
+        try :
+            await bot.send_message(chatID, 'Silakan kirim NIK user yang akan mendapatkan pesan.\
+                                \nNIK user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                \n\nContoh:\n444567\n87765432\n98765432')
+            await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+            
+            # memulai state someUser
+            await bot.set_state(chatID, States.someUser)
+
+        except :
+            print(f"I can't send message to the admin ({chatID}), Sir.")
     
     # jika admin ingin mengirim pesan broadcast ke semua user
     elif call.data == 'all' :
-        await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan.')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-        
-        target = 'allUser'
+        try :
+            await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan.')
+            await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+            
+            target = 'allUser'
 
-        # memulai state bcMsg
-        await bot.set_state(chatID, States.bcMsg)
+            # memulai state bcMsg
+            await bot.set_state(chatID, States.bcMsg)
+
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
     
     elif call.data == 'spc' :
-        await bot.send_message(chatID, 'Silakan kirim NIK user yang akan mendapatkan pesan.\
-                               \nNIK user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                               \n\nContoh:\n444567\n87765432\n98765432')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+        try :
+            await bot.send_message(chatID, 'Silakan kirim NIK user yang akan mendapatkan pesan.\
+                                \nNIK user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
+                                \n\nContoh:\n444567\n87765432\n98765432')
+            await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+            
+            # memulai state someUser
+            await bot.set_state(chatID, States.specialBroadcast)
         
-        # memulai state someUser
-        await bot.set_state(chatID, States.specialBroadcast)
+        except :
+            print(f"I can't send message to the user ({chatID}), Sir.")
     
     # -- BAGIAN WEEKEND REMINDER --
     # jika user ingin mengaktifkan weekend reminder
-    elif call.data in ['on', 'off'] :
-        id = sheet3.col_values(1)
-        cell = id.index(str(chatID)) + 1
+    # elif call.data in ['on', 'off'] :
+    #     id = sheet3.col_values(1)
+    #     cell = id.index(str(chatID)) + 1
 
-        if call.data == 'on' :
-            sheet3.update_cell(cell, 5, call.data)
-            await bot.send_message(chatID, 'Berhasil mengaktifkan reminder untuk akhir pekan ✅\
-                                            \nApa yang ingin kamu lakukan selanjutnya?\
-                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')
+    #     if call.data == 'on' :
+    #         sheet3.update_cell(cell, 5, call.data)
+    #         await bot.send_message(chatID, 'Berhasil mengaktifkan reminder untuk akhir pekan ✅\
+    #                                         \nApa yang ingin kamu lakukan selanjutnya?\
+    #                                         \n\nTekan /help untuk mengetahui daftar command bot ini.')
 
-        # jika user ingin menonaktifkan weekend reminder
-        elif call.data == 'off' :
-            sheet3.update_cell(cell, 5, '-')
-            await bot.send_message(chatID, 'Berhasil menonaktifkan reminder untuk akhir pekan ✅\
-                                            \nApa yang ingin kamu lakukan selanjutnya?\
-                                            \n\nTekan /help untuk mengetahui daftar command bot ini.')
+    #     # jika user ingin menonaktifkan weekend reminder
+    #     elif call.data == 'off' :
+    #         sheet3.update_cell(cell, 5, '-')
+    #         await bot.send_message(chatID, 'Berhasil menonaktifkan reminder untuk akhir pekan ✅\
+    #                                         \nApa yang ingin kamu lakukan selanjutnya?\
+    #                                         \n\nTekan /help untuk mengetahui daftar command bot ini.')
 
-@bot.message_handler(commands=['baabsen'])
+@bot.message_handler(commands=['ba_absen'])
 async def BAabsen(message) :
     chatID = message.chat.id
     
@@ -768,6 +795,7 @@ async def BAabsen(message) :
                                         \nJabatan Atasan:\nNama Atasan:\nNIK Atasan:\
                                         \n\nData dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
                                         \n\nContoh:\nDeveloper\nTelkom Akses Singotoro\n27 September 2022\nMgr\nFaizhal Rifky Alfaris\n934567')
+        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
         
         await bot.set_state(chatID, States.baAbsen)
 
@@ -821,7 +849,7 @@ async def baAbsen(message) :
 
         def iter(r, ls) :
             for i in range(0, r) :
-                pdf.cell(0, 7, f'                 {ls[i]}', ln=1, markdown=True)
+                pdf.cell(0, 7, f'                 {ls[i]}', ln=1)
 
         pdf = FPDF()
         pdf.add_page()
@@ -865,7 +893,7 @@ async def baAbsen(message) :
         pdf.cell(72, 7, f'NIK. {atasan[2]}', align='C')
         pdf.cell(20, 7)
         pdf.cell(72, 7, f'NIK. {pegawai[1]}', ln=1, align='C')
-        pdf.output(f'{pegawai[0]}.pdf')
+        pdf.output(f'BA Absen_{pegawai[0]}.pdf')
 
         file = open(f'BA Absen_{pegawai[0]}.pdf', 'rb')
 
@@ -961,8 +989,7 @@ async def help(message) :
                \n/updatedata — Memperbarui data pengguna\
                \n/customreminder — Menambahkan custom reminder\
                \n/cekcustom — Mengecek custom reminder\
-               \n/weekendreminder — Mengaktifkan atau menonaktifkan reminder untuk akhir pekan\
-               \n/baabsen — Membuat surat pernyataan BA Absen'
+               \n/ba_absen — Membuat berita acara absen bolong'
     
     # jika user adalah admin
     if chatID in admin :
