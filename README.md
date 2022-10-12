@@ -1,2 +1,2 @@
-# PresensiReminderBot
-Bot Telegram Pengingat Presensi
+# Bot HCM
+Bot Telegram Pengingat Absensi dan Media Broadcast
