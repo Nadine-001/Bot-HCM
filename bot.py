@@ -1,67 +1,78 @@
+# IMPORT LIBRARY YANG DIBUTUHKAN
 from telebot.async_telebot import AsyncTeleBot
-from telebot import asyncio_filters
 from telebot.asyncio_storage import StateMemoryStorage
 from telebot.asyncio_handler_backends import State, StatesGroup
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot import asyncio_filters
 from datetime import date, datetime
 import time, asyncio, gspread, random
 from fpdf import FPDF
 
+# TOKEN BOT
 token = '5088370919:AAHa6lHh_S8jR--KGU2Y3u-D3jNV3KktfNU'
 bot = AsyncTeleBot(token, state_storage=StateMemoryStorage())
 
-# custom states
+# CUSTOM STATES
 class States(StatesGroup):
     inputData = State()
     customMsg = State()
     addMsg = State()
     bcMsg = State()
-    specialBroadcast = State()
     someUser = State()
-    nameUser = State()
-    emailUser = State()
     baAbsen = State()
-    hcmHelpdesk = State()
 
-# link ke GSS
+# MENGHUBUNGKAN KE GSS
 gs = gspread.service_account(filename='presensi-reminder.json')
 sh = gs.open_by_key('1kNYfAQGDcZD-EcJQOfkFKErJ_QfilyQH4NwNxLAe5OM')
 
-# sheets excel
+# SHEETS GSS
 sheet1 = sh.worksheet("user_data")
 sheet2 = sh.worksheet("template_messages")
 sheet3 = sh.worksheet("custom_messages")
-sheet4 = sh.worksheet("hcm_helpdesk")
+sheet4 = sh.worksheet("absen_karyawan")
+sheet5 = sh.worksheet("exp_date_absen")
 
-# nama-nama bulan
+# NAMA NAMA BULAN UNTUK TANGGAL DI BA ABSEN
 months = ('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
           ' Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember')
 
-# chat ID admin
+# CHAT ID ADMIN (ARINA, MIDAH, NESSA, MAS FAIZHAL, MAS BAGAS)
 admin = (1372954700, 5033311508, 5142972565, 117145654, 116126490)
 
+# COMMAND /START
 @bot.message_handler(commands=['start'])
 async def start(message) :
+    # CHAT ID USER
     chatID = message.chat.id
-    user = '@' + message.from_user.username
 
     try :
-        # kolom id di GSS
+        # USERNAME USER
+        user = '@' + message.from_user.username
+    except :
+        # BOT MEMBERITAHU USER
+        await bot.send_message(chatID, f'_Username_ tidak terdeteksi.\
+                                       \nHarap _setting_ *username* terlebih dahulu.', 'Markdown')
+
+    try :
+        # KOLOM ID DI GSS
         id = sheet1.col_values(1)
 
-        # jika user adalah user baru
+        # JIKA USER ADALAH USER BARU
         if str(chatID) not in id :
             try :
+                # BOT MEMBALAS COMMAND USER
                 await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻\
                                             \n\nBot ini akan mengingatkanmu untuk absensi pada jam 8 pagi, 5 sore, dan 8 malam.\
                                             \n\nSalam Akhlak,\nFA & HCM Semarang 😉')
 
+                # LOG BOT
                 print(f'New user ({chatID}) started me, Sir.')
 
             except :
+                # LOG BOT JIKA TERJADI ERROR
                 print(f"I can't reply to a new user ({chatID}), Sir.")
 
-            # menambahkan chat ID dan username ke GSS
+            # MENAMBAHKAN CHAT ID DAN USERNAME KE GSS
             row = len(id) + 1
             sheet1.update_cell(row, 1, chatID)
             sheet1.update_cell(row, 2, user)
@@ -70,7 +81,7 @@ async def start(message) :
                 sheet3.update_cell(row, i, '-')
 
             try :
-                # request data ke user
+                # BOT REQUEST DATA KE USER
                 await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu adalah pengguna baru.\
                                                 \n\nMohon kesediaannya untuk mengisi data-data berikut.\
                                                 \n\n*Nama Lengkap:*\n*Nomor Induk Karyawan:*\n*Nomor Hp (Telegram):*\
@@ -78,24 +89,29 @@ async def start(message) :
                                                 \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788',
                                                 'Markdown')
                 
-                # memulai state inputData
+                # MEMULAI STATE INPUTDATA
                 await bot.set_state(chatID, States.inputData)
                 
             except :
+                # LOG BOT JIKA TERJADI ERROR
                 print(f"I'm not able to ask data to a new user ({chatID}), Sir.")
         
-        # jika user bukan user baru
+        # JIKA USER BUKAN USER BARU
         else :
+            # LOG BOT
             print(f'A user ({chatID}) greetings to me, Sir.')
 
-            # meng-update username di GSS
+            # UPDATE USERNAME USER DI GSS
             cell = id.index(str(chatID)) + 1
             sheet1.update_cell(cell, 2, user)
 
+            # DATA DIRI USER DI GSS
             dataUser = sheet1.row_values(cell)
+
+            # JIKA DATA DIRI USER KURANG
             if len(dataUser) < 5 :
                 try :
-                    # request data ke user
+                    # BOT REQUEST DATA KE USER
                     await bot.send_message(chatID, 'Server kami mendeteksi bahwa kamu belum melengkapi data pengguna.\
                                                     \n\nMohon kesediaannya untuk mengisi data-data berikut.\
                                                     \n\n*Nama Lengkap:*\n*Nomor Induk Karyawan:*\n*Nomor Hp (Telegram):*\
@@ -103,50 +119,73 @@ async def start(message) :
                                                     \n\nContoh:\nFaizhal Rifky Alfaris\n934567\n085566677788',
                                                     'Markdown')
 
-                    # memulai state inputData
+                    # MEMULAI STATE INPUTDATA
                     await bot.set_state(chatID, States.inputData)
 
                 except :
+                    # LOG BOT JIKA TERJADI ERROR
                     print(f"I'm not able to ask data to the user ({chatID}), Sir.")
-                    
+
+            # JIKA DATA USER SUDAH LENGKAP  
             else :
                 try :
+                    # BOT MENYAPA USER DAN MENAMPILKAN DAFTAR COMMANDS
                     await bot.send_message(chatID, f'Halo, {message.from_user.first_name}! 👋🏻')
                     await help(message)
 
                 except :
+                    # LOG BOT JIKA TERJADI ERROR
                     print(f"I'm not able to ask data to the user ({chatID}), Sir.")
 
     except :
+        # LOG BOT JIKA TERJADI ERROR
         print("Something went wrong, Sir.")
 
+# COMMAND /CANCEL
 @bot.message_handler(state='*', commands=['cancel'])
 async def cancel(message):
+    # CHAT ID USER 
     chatID = message.chat.id
-
+    
+    # MEMERIKSA STATE USER SAAT INI
     state = await bot.get_state(chatID)
 
+    # JIKA USER BERADA DI SEBUAH STATE 
     if state != None :
         try :
+            # BOT MEMBATALKAN STATE
             await bot.delete_state(chatID)
             await bot.send_message(chatID, 'Berhasil membatalkan proses ✔️\n\nApa yang ingin kamu lakukan selanjutnya?\
-                                            \nTekan /help untuk mengetahui daftar command bot ini.')                    
+                                            \nTekan /help untuk mengetahui daftar command bot ini.')
+                                            
         except :
+            # LOG BOT JIKA TERJADI ERROR
             print(f"I can't delete the state of user ({chatID}), Sir.")
-                
+    
+    # JIKA USER TIDAK BERADA DI SEBUAH STATE
     else :
         try :
+            # BOT MEMBALAS USER
             await bot.send_message(chatID, 'Tidak ada proses yang perlu dibatalkan.\
                                             \n\nTekan /help untuk mengetahui daftar command bot ini.')
+            
         except :
+            # LOG BOT JIKA TERJADI ERROR
             print(f"I can't reply to the user ({chatID}), Sir.")
 
-# state inputData
+# STATE /INPUTDATA
 @bot.message_handler(state=States.inputData)
 async def inputData(message) :
     chatID = message.chat.id
-    user = '@' + message.from_user.username
-    
+
+    try :
+        # USERNAME USER
+        user = '@' + message.from_user.username
+    except :
+        # BOT MEMBERITAHU USER
+        await bot.send_message(chatID, f'_Username_ tidak terdeteksi.\
+                                       \nHarap _setting_ *username* terlebih dahulu.', 'Markdown')
+
     # kolom id di GSS
     id = sheet1.col_values(1)
 
@@ -195,10 +234,18 @@ async def inputData(message) :
         except :
             print(f"I can't reply to the user ({chatID}), Sir.")
 
+# COMMAND /CEKDATA
 @bot.message_handler(commands=['cekdata'])
 async def cekData(message) :
     chatID = message.chat.id
-    user = '@' + message.from_user.username
+
+    try :
+        # USERNAME USER
+        user = '@' + message.from_user.username
+    except :
+        # BOT MEMBERITAHU USER
+        await bot.send_message(chatID, f'_Username_ tidak terdeteksi.\
+                                       \nHarap _setting_ *username* terlebih dahulu.', 'Markdown')
 
     # kolom id di GSS
     id = sheet1.col_values(1)
@@ -235,7 +282,7 @@ async def cekData(message) :
         except :
             print(f"I can't reply to the user ({chatID}), Sir.")
 
-# tombol 'Sudah' dan 'Belum'
+# PILIHAN 'SUDAH' DAN 'BELUM' UNTUK COMMAND /UPDATEDATA
 async def answers() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
@@ -243,12 +290,20 @@ async def answers() :
                InlineKeyboardButton('Belum', callback_data='blm'))
     return markup
 
+# COMMAND /UPDATEDATA
 @bot.message_handler(commands=['updatedata'])
 async def updateData(message) :
     global chatID
 
     chatID = message.chat.id
-    user = '@' + message.from_user.username
+
+    try :
+        # USERNAME USER
+        user = '@' + message.from_user.username
+    except :
+        # BOT MEMBERITAHU USER
+        await bot.send_message(chatID, f'_Username_ tidak terdeteksi.\
+                                       \nHarap _setting_ *username* terlebih dahulu.', 'Markdown')
     
     # kolom id di GSS
     id = sheet1.col_values(1)
@@ -270,7 +325,7 @@ async def updateData(message) :
         except :
             print(f"I can't reply to the user ({chatID}), Sir.")
 
-# pilihan '8 Pagi', '5 Sore', dan '8 Malam'
+# PILIHAN '8 PAGI', '5 SORE', DAN '8 MALAM' UNTUK COMMAND /CUSTOMREMINDER
 async def options() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 3
@@ -279,6 +334,7 @@ async def options() :
                InlineKeyboardButton('8 Malam', callback_data='night'))
     return markup
 
+# COMMAND /CUSTOMREMINDER
 @bot.message_handler(commands=['customreminder'])
 async def customReminder(message) :
     global chatID
@@ -290,7 +346,7 @@ async def customReminder(message) :
     except :
         print(f"I'm not able to ask the user ({chatID}), Sir.")
 
-# state customMsg
+# STATE CUSTOMMSG UNTUK MENERIMA INPUT PESAN CUSTOM REMINDER
 @bot.message_handler(state=States.customMsg)
 async def customMsg(message) :
     id = sheet3.col_values(1)
@@ -322,7 +378,7 @@ async def customMsg(message) :
     # mengakhiri state customMsg
     await bot.delete_state(chatID)
 
-# pilihan 'Aktifkan' dan 'Nonaktifkan'
+# PILIHAN 'AKTIFKAN' DAN 'NONAKTIFKAN' UNTUK COMMAND /WEEKENDREMINDER
 # async def weekend() :
 #     markup = InlineKeyboardMarkup()
 #     markup.row_width = 2
@@ -341,7 +397,7 @@ async def customMsg(message) :
 #     except :
 #         print(f"I'm not able to ask the user ({chatID}), Sir.")
 
-# pilihan 'HCM' dan 'FA/FX'
+# PILIHAN 'HCM' DAN 'FA/FX' UNTUK COMMAND /HCM_HELPDESK
 async def question() :
     id = sheet1.col_values(1)
     username = sheet1.col_values(2)
@@ -358,6 +414,7 @@ async def question() :
                InlineKeyboardButton('FA/FX', f'https://t.me/{fa[1:]}'))
     return markup
 
+# COMMAND /HCM_HELPDESK
 @bot.message_handler(commands=['hcm_helpdesk'])
 async def hcm_helpdesk(message) :
     global chatID
@@ -369,7 +426,7 @@ async def hcm_helpdesk(message) :
     except :
         print(f"I'm not able to ask the user ({chatID}), Sir.")
 
-# pilihan '8 Pagi', '5 Sore', dan '8 Malam'
+# PILIHAN '8 PAGI', '5 SORE', DAN '8 MALAM' UNTUK COMMAND /ADDREMINDER
 async def choices() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 3
@@ -378,6 +435,7 @@ async def choices() :
                InlineKeyboardButton('8 Malam', callback_data='Night'))
     return markup
 
+# COMMAND /ADDREMINDER
 @bot.message_handler(commands=['addreminder'])
 async def addReminder(message) :
     global chatID
@@ -390,7 +448,7 @@ async def addReminder(message) :
         except :
             print(f"I'm not able to ask the admin ({chatID}), Sir.")
 
-# state addMsg
+# STATE ADDMSG UNTUK MENERIMA INPUT TEMPLATE PESAN
 @bot.message_handler(state=States.addMsg)
 async def addMsg(message) :
     template = sheet2.col_values(column)
@@ -413,7 +471,7 @@ async def addMsg(message) :
     # mengakhiri state addMsg
     await bot.delete_state(chatID)
 
-# tombol 'User Tertentu' dan 'Semua User'
+# PILIHAN 'USER TERTENTU' DAN 'SEMUA USER' UNTUK COMMAND /BROADCAST
 async def selections() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
@@ -421,6 +479,7 @@ async def selections() :
                InlineKeyboardButton('Semua User', callback_data='all'))
     return markup
 
+# COMMAND /BROADCAST
 @bot.message_handler(commands=['broadcast'])
 async def broadcast(message) :
     global chatID
@@ -433,7 +492,7 @@ async def broadcast(message) :
         except :
             print(f"I'm not able to ask the admin ({chatID}), Sir.")
 
-# tombol 'HCM' dan 'FA'
+# PILIHAN 'HCM' DAN 'FA' UNTUK JENIS INFO BROADCAST
 async def ask() :
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
@@ -441,15 +500,15 @@ async def ask() :
                InlineKeyboardButton('FA', callback_data='fa'))
     return markup
 
-# state someUser
+# STATE SOMEUSER UNTUK MENERIMA NIK USER DARI ADMIN
 @bot.message_handler(state=States.someUser)
 async def someUser(message) :
     global target, users, niks, names, failedUsers
 
-    chatID = message.chat.id
+    target = 'some'
 
-    # kolom id di GSS
     nik = sheet1.col_values(4)
+    chatID = message.chat.id
 
     # mengambil input dari admin
     async with bot.retrieve_data(chatID) as data :
@@ -471,8 +530,6 @@ async def someUser(message) :
         except :
             failedUsers.append(i)
 
-    target = 'someUser'
-
     try :
         await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan.')
         await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
@@ -483,12 +540,11 @@ async def someUser(message) :
     except :
         print(f"I'm not able to ask the admin ({chatID}), Sir.")
 
-# state bcMsg
+# STATE BCMSG UNTUK BROADCAST KE PENGGUNA
 @bot.message_handler(state=States.bcMsg, content_types=['text', 'photo', 'document', 'video'])
 async def bcMsg(message) :
-    global type, count
+    global type, count, target, names, niks
 
-    id = sheet1.col_values(1)
     chatID = message.chat.id
     
     # mengambil input dari admin
@@ -496,9 +552,7 @@ async def bcMsg(message) :
         # mengidentifikasi tipe pesan yang dikirim admin
         type = message.content_type
         
-        if type == 'text' :
-            data['broadcast'] = message.text
-        elif type == 'photo' :
+        if type == 'photo' :
             data['broadcast'] = message.photo[0].file_id
         elif type == 'document' :
             data['broadcast'] = message.document.file_id
@@ -506,29 +560,11 @@ async def bcMsg(message) :
             data['broadcast'] = message.video.file_id
     
     # jika broadcast akan disiarkan ke user tertertu
-    if target == 'someUser' :
+    if target == 'some' :
         if type == 'text' :
-            blocker = []
-            count = 0
+            # memanggil fungsi text
+            await text(users, names, niks, message.text)
 
-            for i in range(0, len(users)) :
-                msg = f'{header}\
-                        \nSemangat Pagi !!!\
-                        \nKepada sdr. {names[i]} / NIK. {niks[i]}\
-                        \n{message.text}'
-
-                try :
-                    count += 1
-                    await bot.send_message(users[i], msg, 'Markdown')
-                except :
-                    blocker.append(users[i])
-
-            if bool(blocker) :
-                    try :
-                        await bot.send_message(chatID, f'Pengguna dengan chat ID : {blocker} memblokir bot ini ‼️')
-                    except :
-                        print(f"I'm not able to message the admin ({chatID}), Sir.")
-        
         else :        
             # memanggil fungsi send
             await send(users, data['broadcast'], message.caption)
@@ -541,16 +577,39 @@ async def bcMsg(message) :
 
     # jika broadcast akan disiarkan ke semua user
     else :
-        # memanggil fungsi send
-        await send(id[1:], data['broadcast'], message.caption)
+        id = sheet1.col_values(1)
+        id = id[1:]
+
+        names = sheet1.col_values(3)
+        names = names[1:]
+
+        niks = sheet1.col_values(4)
+        niks = niks[1:]
+
+        if len(names) < len(id) :
+            for i in range(0, len(id) - len(names)) :
+                names.append('')
+                niks.append('')
+
+        if type == 'text' :
+            # memanggil fungsi text
+            await text(id, names, niks, message.text)
+
+        else :                
+            # memanggil fungsi send
+            await send(id, data['broadcast'], message.caption)
     
     if count > 0 :
         try :
             await bot.send_message(chatID, f'Pesan berhasil disiarkan ke {count} pengguna ✅\
                                         \n\nApa yang ingin kamu lakukan selanjutnya?\
                                         \nTekan /help untuk mengetahui daftar command bot ini.')
+            
+            count = 0
+
         except :
             print(f"I'm not able to message the admin ({chatID}), Sir.")
+
     else :
         try :
             await bot.send_message(chatID, '❌ Pesan gagal disiarkan.')
@@ -560,7 +619,32 @@ async def bcMsg(message) :
     # mengakhiri state bcMsg
     await bot.delete_state(chatID)
 
-# fungsi untuk mengirim broadcast ke user
+# FUNGSI UNTUK MENGIRIM BROADCAST BERUPA TEKS KE USER
+async def text(targets, identity1, identity2, message) :
+    global count
+    
+    blocker = []
+    count = 0
+
+    for i in range(0, len(targets)) :
+        msg = f'{header}\
+                \nSemangat Pagi !!!\
+                \nKepada sdr. {identity1[i]} / NIK. {identity2[i]}\
+                \n{message}'
+
+        try :
+            count += 1
+            await bot.send_message(targets[i], msg, 'Markdown')
+        except :
+            blocker.append(targets[i])
+    
+    if bool(blocker) :
+        try :
+            await bot.send_message(chatID, f'Pengguna dengan chat ID : {blocker} memblokir bot ini ‼️')
+        except :
+            print(f"I'm not able to message the admin ({chatID}), Sir.")
+
+# FUNGSI UNTUK MENGIRIM BROADCAST SELAIN TEKS KE USER
 async def send(targets, msg, capt) :
     global count
 
@@ -571,14 +655,13 @@ async def send(targets, msg, capt) :
     for i in targets :
         count += 1
         try :
-            if type == 'text' :
-                await bot.send_message(i, msg)
-            elif type == 'photo' :
+            if type == 'photo' :
                 await bot.send_photo(i, msg, capt)
             elif type == 'document' :
                 await bot.send_document(i, msg, caption=capt)
             elif type == 'video' :
                 await bot.send_video(i, msg, caption=capt)
+                
         except :
             blocker.append(i)
     
@@ -591,7 +674,7 @@ async def send(targets, msg, capt) :
 # mengambil input dari tombol yang diklik user
 @bot.callback_query_handler(func=lambda call: True)
 async def callback_query(call) :
-    global column, target, activeWeekend, topic, header
+    global column, target, header
 
     # -- BAGIAN UPDATE DATA --
     # jika user menjawab 'Sudah'
@@ -666,25 +749,14 @@ async def callback_query(call) :
     
     # -- BAGIAN BROADCAST (ADMIN ONLY) --
     # jika admin ingin mengirim pesan broadcast ke user tertentu
-    elif call.data == 'some' :
+    elif call.data in ['some', 'all'] :
         try :
             await bot.send_message(chatID, 'Silakan pilih jenis informasi pesan yang ingin disampaikan.', reply_markup=await ask())
         except :
             print(f"I'm not able to ask the admin ({chatID}), Sir.")
-    
-    # jika admin ingin mengirim pesan broadcast ke semua user
-    elif call.data == 'all' :
-        try :
-            await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan.')
-            await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
-            
-            target = 'allUser'
 
-            # memulai state bcMsg
-            await bot.set_state(chatID, States.bcMsg)
-
-        except :
-            print(f"I can't send message to the user ({chatID}), Sir.")
+        # menentukan target pesan broadcast
+        target = call.data
     
     elif call.data in ['hcm', 'fa'] :
         if call.data == 'hcm' :
@@ -692,13 +764,29 @@ async def callback_query(call) :
         elif call.data == 'fa' :
             header = '‼️ INFO FIBER ACADEMY ‼️\n'
         
-        await bot.send_message(chatID, 'Silakan kirim *NIK* user yang akan mendapatkan pesan.\
-                            \nNIK user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter).\
-                            \n\nContoh:\n444567\n87765432\n98765432', 'Markdown')
-        await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+        if target == 'some' :
+            try :
+                await bot.send_message(chatID, 'Silakan kirim *NIK* user yang akan mendapatkan pesan.\
+                                                \n_NIK user dikirim dalam satu pesan yang dipisahkan oleh baris baru (Enter)._\
+                                                \n\nContoh:\n444567\n87765432\n98765432', 'Markdown')
+                await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+                
+                # memulai state someUser
+                await bot.set_state(chatID, States.someUser)
+
+            except :
+                print(f"I can't send message to the admin ({chatID}), Sir.")
         
-        # memulai state someUser
-        await bot.set_state(chatID, States.someUser)
+        elif target == 'all' :
+            try :
+                await bot.send_message(chatID, 'Silakan kirim pesan broadcast untuk disiarkan ke semua pengguna.')
+                await bot.send_message(chatID, '⚠️ Tekan /cancel untuk membatalkan proses.')
+                
+                # memulai state bcMsg
+                await bot.set_state(chatID, States.bcMsg)
+
+            except :
+                print(f"I can't send message to the admin ({chatID}), Sir.")
 
     # -- BAGIAN WEEKEND REMINDER --
     # jika user ingin mengaktifkan weekend reminder
@@ -719,6 +807,7 @@ async def callback_query(call) :
     #                                         \nApa yang ingin kamu lakukan selanjutnya?\
     #                                         \n\nTekan /help untuk mengetahui daftar command bot ini.')
 
+# COMMAND /BA_ABSEN
 @bot.message_handler(commands=['ba_absen'])
 async def BAabsen(message) :
     chatID = message.chat.id
@@ -737,7 +826,7 @@ async def BAabsen(message) :
     except :
         print(f"I can't ask the user ({chatID}), Sir.")
 
-# state baAbsen
+# STATE BAABSEN UNTUK MENERIMA INPUT DARI USER
 @bot.message_handler(state=States.baAbsen)
 async def baAbsen(message) :
     chatID = message.chat.id
@@ -848,6 +937,7 @@ async def baAbsen(message) :
         except :
             print(f"I can't reply to the user ({chatID}), Sir.")
 
+# COMMAND /CEKCUSTOM
 @bot.message_handler(commands=['cekcustom'])
 async def cekCustom(message) :
     chatID = message.chat.id
@@ -887,6 +977,7 @@ async def cekCustom(message) :
         except :
             print(f"I can't reply to the user ({chatID}), Sir.")
 
+# COMMAND /RESET
 @bot.message_handler(commands=['reset'])
 async def reset(message) :
     chatID = message.chat.id
@@ -915,6 +1006,7 @@ async def reset(message) :
         except :
             print(f"I can't send message to the user ({chatID}), Sir.")
 
+# COMMAND /HELP
 @bot.message_handler(commands=['help'])
 async def help(message) :
     chatID = message.chat.id
@@ -945,12 +1037,12 @@ async def help(message) :
         except :
             print(f"I can't send message to the user ({chatID}), Sir.")
 
-# untuk mengatasi pesan user selain yang ada di daftar command
+# UNTUK MENANGKAP PESAN USER SELAIN YANG ADA DI DAFTAR COMMAND
 @bot.message_handler()
 async def anything(message) :
     await help(message)
 
-# fungsi untuk mengirim reminder absensi ke user
+# FUNGSI UNTUK MENGIRIM REMINDER ABSENSI KE USER
 async def reminder(today, time) :
     global id
 
@@ -1041,8 +1133,8 @@ async def reminder(today, time) :
             if bool(blocker) :
                 print(f'User : {blocker} blocked me, Sir.\n')
 
-# fungsi untuk memeriksa custom reminder di GSS
-# dan mengirim pesan reminder ke user
+# FUNGSI UNTUK MEMERIKSA CUSTOM REMINDER DI GSS
+# DAN MENGIRIM PESAN REMINDER KE USER
 async def reminderMsg(col, targets) :
     # mengambil pesan secara acak dari template message
     templateMsg = sheet2.col_values(col)
@@ -1071,35 +1163,127 @@ async def reminderMsg(col, targets) :
     
     print(f'Messages successfuly sent to {count} from {len(id)} users, Sir.')
 
+# NOTIFIKASI KEPADA ADMIN UNTUK MENGGANTI TANGGAL REKAP ABSEN
+async def notif() :
+    exp_date = sheet4.row_values(3)
+    have_used = sheet5.row_values(1)
+
+    msg = 'Yth. Admin di tempat,\
+           \n\nRekap absen karyawan pada _database_ saat ini belum diperbarui.\
+           \nSegera lakukan pembaruan dengan memasukkan rekap absen karyawan periode bulan ini pada *_sheet_ absen karyawan* di _database_.\
+           \nDemikian pemberitahuan ini saya sampaikan.\
+           \n\nSalam,\
+           \nBOT HCM'
+
+    if exp_date == have_used :
+        for i in admin[2:] :
+            try :
+                await bot.send_message(i, msg, 'Markdown')
+            except :
+                print(f"I can't send message to the admin ({i}), Sir.")
+
+# BROADCAST OTOMATIS ABSEN KURANG UNTUK KARYAWAN
+async def absen_kurang() :
+    exp_date = sheet4.row_values(3)
+    have_used = sheet5.row_values(1)
+
+    niks = sheet4.col_values(2)
+    nik_list = list(dict.fromkeys(niks[4:]))
+
+    names = sheet4.col_values(3)
+    name_list = list(dict.fromkeys(names[4:]))
+
+    nama_absen = []
+    nik_absen = []
+    hari_absen = []
+    id_absen = []
+
+    count_success = 0
+    count_failed = 0
+
+    if exp_date != have_used :
+        for i in range(0, len(nik_list)) :
+            days = niks.count(nik_list[i])
+            
+            if days < 20 :
+                try :
+                    id = sheet1.col_values(1)
+                    nikss = sheet1.col_values(4)
+
+                    cell = nikss.index(nik_list[i])
+                    id_absen.append(id[cell])    
+                    hari_absen.append(20 - days)
+                    nik_absen.append(nik_list[i])
+                    nama_absen.append(name_list[i])
+
+                    count_success += 1
+
+                except :
+                    count_failed += 1
+
+        for i in range(0, len(id_absen)) :
+            warning_msg = f'‼️REMINDER HCM‼️\
+                            \n\nSemangat Pagi,\
+                            \nKepada Sdr. {nama_absen[i]} / NIK. {nik_absen[i]}\
+                            \nBahwa ada indikasi kurangnya absensi saudara untuk _payroll_ bulan ini sebanyak {hari_absen[i]} kali.\
+                            \n\nMohon untuk menghubungi HR Area setempat guna mengkonfirmasi absensi, atau bisa langsung membuat Berita Acara Absen menggunakan command */ba_absen* pada BOT ini.\
+                            \nTerimakasih\
+                            \n\n~ HCM Semarang ~'
+            try :
+                await bot.send_message(id_absen[i], warning_msg, 'Markdown')
+            except :
+                print(f"I can't send message to the user ({id_absen[i]}), Sir.")
+
+        sheet5.update_cell(1, 1, exp_date[0])
+
+# FILTER STATE UNTUK MEMBEDAKAN STATE SAAT USER MEMBERI INPUT
 bot.add_custom_filter(asyncio_filters.StateFilter(bot))
 
 async def main() :
     while True :
-        # memeriksa hari
+        # MEMERIKSA TANGGAL
+        dt = datetime.now()
+        dt = dt.strftime('%d')
+
+        # MEMERIKSA HARI
         today = date.today()
         today = today.weekday()
 
-        # memeriksa waktu saat ini
+        # MEMERIKSA WAKTU
         currentTime = time.strftime('%H:%M')
 
+        # MEMANGGIL FUNGSI REMINDER
         await reminder(today, currentTime)
 
+        # JIKA HARI INI TANGGAL 8, 10, ATAU 12
+        if dt in ['8', '10', '12'] :
+            if currentTime == '13:00' :
+                # MEMANGGIL FUNGSI NOTIF
+                await notif()
+        # JIKA HARI INI TANGGAL 13
+        elif dt == '13' :
+            if currentTime == '13:00' :
+                # MEMANGGIL FUNGSI ABSEN_KURANG
+                await absen_kurang()
+
+        # MEMERIKSA DETIK DAN MENIT SAAT INI
         second = time.strftime('%S')
         second = int(second)
         minute = time.strftime('%M')
         minute = int(minute)*60
 
+        # MENGHITUNG TOTAL DETIK SAAT INI
         seconds = second + minute
 
+        # LOG JAM
         clock = time.strftime('%H:%M:%S')
         print(f'* {clock} *')
-        print(f'— {today} —')
         print()
 
-        # waktu tunggu loop
+        # WAKTU TUNGGU LOOP UNTUK MEMERIKSA WAKTU TIAP JAM
         await asyncio.sleep(3600 - seconds)
 
-# run using asynchronous mode
+# MENJALANKAN BOT DENGAN CARA ASYNCHRONOUS
 while True :
     try :
         loop = asyncio.new_event_loop()
